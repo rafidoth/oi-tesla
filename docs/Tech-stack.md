@@ -1,0 +1,29 @@
+# Technology Stack & Justification
+
+## Table of Contents
+
+- [Technology Choices & Rationale](#technology-choices--rationale)
+- [API Architecture Style](#api-architecture-style)
+
+---
+
+## Technology Choices & Rationale
+
+| Layer | Pick | Why this over the alternatives |
+|---|---|---|
+| Frontend | **Next.js (App Router) + TypeScript** | Mandated stack; App Router gives file-based routing, layouts for the passenger/driver role split, and SSR for fast first paint. The repo already scaffolds `client/` as a standalone Next.js + TS app (see note in [`Architecture.md Section 9`](./Architecture.md#9-frontend-architecture)). |
+| Backend | **Node.js + Express + TypeScript** | Express is right-sized for a bounded MVP: an explicit middleware chain (helmet → CORS → rate limit → logging → auth → validation → routes → error handler) is the most reviewer-readable option. NestJS would impose a DI/decorator framework whose structure we replicate anyway with the module/service layout in [`Codebase.md`](./Codebase.md#project-tree); Fastify's throughput advantage is irrelevant at MVP scale. See [`API.md Section 11.1`](./API.md#111-why-rest-and-not-graphqlother) for REST vs GraphQL. |
+| Database | **PostgreSQL 16** | The core invariant (`occupiedSeats ≤ capacity`, PRD Section 7.4) is enforced with a **conditional atomic UPDATE + CHECK constraint** — first-class in Postgres. The design also relies on **partial unique indexes** (one active pool per driver, one active membership per passenger per pool, open-pool listing) which MySQL lacks, and on `TIMESTAMPTZ`, JSONB, and enum-like CHECKs. SQLite has no credible multi-client concurrency story for the seat race and no networked deployment story. Postgres is also what the free tier (Neon) offers. |
+| ORM | **Drizzle** | TypeScript-native, SQL-first schema definitions in `src/db/schema/`; auto-generated migrations via Drizzle Kit (`drizzle-kit generate / migrate`); fully typed client without heavy generated binary overhead; transparent transaction support wrapping the join/accept/cancel flows. The guarded counter uses Drizzle's `sql` tagged template directly inside transactions for atomic execution with bound parameters ([`Architecture.md Section 5`](./Architecture.md#5-capacity--concurrency)). |
+| Auth | **JWT (HS256) Bearer** | Stateless — no session store, survives free-tier spin-downs, no cross-origin cookie configuration between the Vercel and Render domains, and no CSRF surface. Tradeoffs (no revocation, 24h expiry) documented in [`Architecture.md Section 7`](./Architecture.md#7-security--authorization). |
+| Validation | **Zod** | One schema language for every body/param/query, colocated with each module; produces typed parse results, so validation and typing cannot drift apart. |
+| Tests | **Vitest + Supertest** | Vitest is TS-native and fast; unit tests cover the pure fare/matching/state functions (PRD Section 15 testability); Supertest drives the real Express app against a throwaway Postgres for integration tests — including a real concurrent race for the final seat ([`Architecture.md Section 10`](./Architecture.md#10-testing-strategy)). |
+| Logging | **pino + pino-http** | Structured JSON logs with request IDs at negligible overhead; transition logs satisfy PRD Section 15 (`timestamp, actor, entity, previous state, new state`). |
+| Money | **integer paisa (`BIGINT`)** | PRD Section 8.3. No floats anywhere in fare math; proportional splits use integer arithmetic with largest-remainder rounding ([`Architecture.md Section 6`](./Architecture.md#6-fare-engine--payments)). |
+| Packaging | **Docker Compose** | `db` + `migrate/seed` + `api` + `web`, health-checked, one command ([`Architecture.md Section 11`](./Architecture.md#11-docker--local-development)). |
+
+---
+
+## API Architecture Style
+
+API style: **REST** — see [`API.md`](./API.md).
