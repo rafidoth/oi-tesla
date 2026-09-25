@@ -15,6 +15,22 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      target: builder
+    container_name: oitesla-migrate
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    command: sh -c "npm run db:migrate && npm run db:seed"
+
   api:
     build:
       context: ./
@@ -24,8 +40,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
       - "8080:8080"
 
