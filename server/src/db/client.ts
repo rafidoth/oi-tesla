@@ -4,7 +4,10 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 
 dotenv.config();
 
-const databaseUrl = process.env.DATABASE_URL || 'postgres://user:pass@localhost:5432/oitesla';
+const databaseUrl = process.env.DATABASE_URL
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is missing.");
+}
 
 export const queryClient = postgres(databaseUrl, {
   connect_timeout: 3,
