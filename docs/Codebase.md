@@ -60,7 +60,11 @@ Routes → Controller → Service → Repository → db/client
 
 ```
 OiTesla/
-├── client/                         # Next.js App Router (existing scaffold — see Architecture.md Section 9)
+├── client/                         # Next.js App Router (see Architecture.md Section 9)
+│   ├── app/                        # Route pages and layout orchestrators
+│   ├── features/                   # Feature slices (auth, rides, pools, etc. with api/hooks/store/components)
+│   ├── components/                 # Shared UI (ui/, custom/)
+│   └── api/                        # Shared networking & query client setup
 │
 ├── server/
 │   ├── src/

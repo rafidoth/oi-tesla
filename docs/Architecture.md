@@ -370,6 +370,18 @@ app/
 
 Small presentational components over a thin feature layer: `StatusBadge` (derived ride status), `SeatMeter` (occupied/capacity — the capacity invariant made visible), `LocationSelect` (served pairs only), `FareEstimate`, `RideCard`, `PoolCard`, `RosterTable` (driver-only fares). Business rules (when cancel is legal, which lifecycle button is next) come from the server's derived status — the client never re-implements the state machine.
 
+### 9.4 Feature-Sliced Directory Structure
+
+To keep the frontend scalable as the codebase expands, domain logic is sliced under `client/features/<feature>/`:
+- `api/`: Endpoint callers (`*.api.ts`) and mock adapters.
+- `hooks/`: React Query hooks (`use*Query`, `use*Mutation`).
+- `store/`: Zustand state slices owned by this feature.
+- `types/`: Domain models, request/response DTOs (`*.types.ts`).
+- `components/`: Feature-specific forms, guards, and interactive widgets.
+- `index.ts`: Public barrel exports.
+
+Shared UI primitives reside in `client/components/ui/` and `client/components/custom/`, while shared networking resides in `client/api/`.
+
 ---
 
 ## 10. Testing Strategy
