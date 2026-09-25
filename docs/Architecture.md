@@ -247,7 +247,7 @@ Why this is airtight:
 
 | Edge case | Outcome under this design |
 |---|---|
-| Two passengers race for the final seat | Serialised by the guarded UPDATE; loser gets `409 POOL_FULL`; final occupancy ≤ capacity — **integration-tested with real parallel requests** ([Section 10](#10-testing-strategy)) |
+| Two passengers race for the final seat | Serialised by the guarded UPDATE; loser gets `409 POOL_FULL`; final occupancy ≤ capacity — guaranteed by the atomic UPDATE and DB CHECK constraint ([Section 5.1](#51-concurrency-primitive--the-guarded-atomic-update)) |
 | Duplicate acceptance (same passenger twice in a pool) | Partial unique index `(pool_id, passenger_id) WHERE cancelled_at IS NULL`; second INSERT aborts its transaction |
 | Join attempted after `STARTED` | Status predicate inside the guarded UPDATE fails → `422` |
 | Cancel + concurrent join for the released seat | Cancel commits first (seat freed) → join's guard passes, or join ran first (pool full) → cancel still fine; either serialization is correct |
@@ -374,11 +374,12 @@ Small presentational components over a thin feature layer: `StatusBadge` (derive
 
 ## 10. Testing Strategy
 
+Automated testing in OiTesla is strictly scoped to **pure domain logic**. All other functionality—including authentication flows, API endpoints, role gates, integration lifecycles, and UI components—is verified via manual testing.
+
 | Layer | Tool | What it proves |
 |---|---|---|
 | Unit | Vitest | **Fare engine**: exact splits, largest-remainder ties, sum == total; **matching**: pairwise rule, transitivity leak blocked, earliest-pool determinism, unserved pairs; **state machine**: exhaustive legal/illegal edges incl. all PRD Section 6 examples; **seed integrity**: route distance consistency |
-| Integration | Vitest + Supertest against a throwaway Docker Postgres | Auth flows; **the full Banani Rush Hour acceptance scenario (PRD Section 18) as one test** — 3 joins, 4th rejected, lifecycle walk, frozen fares, payments; **capacity race**: N parallel join/accept requests for the final seat → exactly one 2xx, rest `409`, final `occupied_seats ≤ capacity`; cancel → seat refill; duplicate membership; authorization (passenger B cannot read/cancel passenger A's ride → 404/403) |
-| Contract | Same integration suite | The duplicated client DTO types stay honest (responses match the shapes the client types declare) |
+| Manual | Manual Verification | **Auth & Role Gates**: User registration, login, JWT validation, passenger/driver role restrictions; **API Endpoints**: Request lifecycles, cancellation rules, cash & TeslaPay settlement; **UI & Navigation**: Passenger and driver dashboard workflows, real-time polling updates, error banners, and loading states |
 
 Determinism (PRD Section 15): fare and matching outputs are pure functions of (request, config, route data) — no clocks, no randomness.
 
