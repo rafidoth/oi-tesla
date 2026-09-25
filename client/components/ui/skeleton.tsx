@@ -9,7 +9,7 @@ function Skeleton({ className, animate = false, ...props }: SkeletonProps) {
     <div
       data-slot="skeleton"
       className={cn(
-        "rounded-[var(--radius-sm)] bg-surface-subtle",
+        "rounded-sm bg-surface-subtle",
         animate && "animate-pulse",
         className
       )}
