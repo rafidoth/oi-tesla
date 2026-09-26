@@ -8,14 +8,15 @@ export const apiClient: AxiosInstance = axios.create({
   timeout: 10000,
 });
 
-// Request interceptor
+import { useAuthStore } from "@/features/auth/store/auth.store";
+
+// Request interceptor: attach bearer token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // You can attach tokens or custom headers here if needed:
-    // const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    // if (token && config.headers) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = useAuthStore.getState().token;
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error: AxiosError) => {
@@ -23,12 +24,20 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor
+// Response interceptor: handle 401 and errors
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => {
     return response;
   },
   (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      useAuthStore.getState().logout();
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = "/login?expired=true";
+      }
+    }
+
     if (error.response) {
       console.error(
         `API Error [${error.response.status}]:`,
@@ -43,4 +52,5 @@ apiClient.interceptors.response.use(
   }
 );
 
+export const baseUrlWrapper = (relativeUrl: string) : string => `${process.env.NEXT_PUBLIC_API_URL}${relativeUrl}`
 export default apiClient;

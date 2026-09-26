@@ -1,10 +1,18 @@
 import { cn } from "cn"
 
-function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+interface SkeletonProps extends React.ComponentProps<"div"> {
+  animate?: boolean
+}
+
+function Skeleton({ className, animate = false, ...props }: SkeletonProps) {
   return (
     <div
       data-slot="skeleton"
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      className={cn(
+        "rounded-sm bg-surface-subtle",
+        animate && "animate-pulse",
+        className
+      )}
       {...props}
     />
   )

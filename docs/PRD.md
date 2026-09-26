@@ -2,6 +2,49 @@
 
 > Companion to [`Architecture.md`](./Architecture.md), which owns the technical *how* (schema, API, algorithms, enforcement mechanisms). This document owns the *what* and *why*: user-facing behavior and business rules.
 
+---
+
+## Table of Contents
+
+- [1. Product Overview](#1-product-overview)
+- [2. Goals & Non-Goals](#2-goals--non-goals)
+  - [2.1 Goals](#21-goals)
+  - [2.2 Non-Goals](#22-non-goals)
+- [3. Actors & Responsibilities](#3-actors--responsibilities)
+  - [3.1 Passenger](#31-passenger)
+  - [3.2 Driver](#32-driver)
+  - [3.3 Vehicle / Tesla](#33-vehicle--tesla)
+  - [3.4 Pool / Ride](#34-pool--ride)
+- [4. Core User Stories](#4-core-user-stories)
+  - [Passenger](#passenger)
+  - [Driver](#driver)
+  - [Pool](#pool)
+- [5. Domain Model](#5-domain-model)
+- [6. Ride Lifecycle](#6-ride-lifecycle)
+- [7. Pooling & Matching](#7-pooling--matching)
+  - [7.1 Matching Rule](#71-matching-rule)
+  - [7.2 Compatibility Examples](#72-compatibility-examples)
+  - [7.3 Capacity Rule](#73-capacity-rule)
+  - [7.4 Concurrent Pool Joining](#74-concurrent-pool-joining)
+- [8. Fare & Payment](#8-fare--payment)
+  - [8.1 Fare Principle](#81-fare-principle)
+  - [8.2 Individual Fare](#82-individual-fare)
+  - [8.3 Money Representation](#83-money-representation)
+  - [8.4 Payment](#84-payment)
+- [9. Functional Requirements — Passenger](#9-functional-requirements--passenger)
+- [10. Functional Requirements — Driver](#10-functional-requirements--driver)
+- [11. Authorization & Data Visibility](#11-authorization--data-visibility)
+- [12. Geography & Routes](#12-geography--routes)
+- [13. Ride History & Audit](#13-ride-history--audit)
+- [14. Edge Cases & Failure Handling](#14-edge-cases--failure-handling)
+- [15. Non-Functional Requirements](#15-non-functional-requirements)
+- [16. System Capabilities](#16-system-capabilities)
+- [17. Acceptance Criteria](#17-acceptance-criteria)
+- [18. Seed Data & Demo Scenario](#18-seed-data--demo-scenario)
+- [19. Out of Scope](#19-out-of-scope)
+
+---
+
 ## 1. Product Overview
 
 **Product:** Dhaka Tesla (Three-Wheeler Autorickshaw) Pool

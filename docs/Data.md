@@ -1,5 +1,25 @@
 # Domain Model & Database Schema
 
+## Table of Contents
+
+- [5. Domain Model & Invariants](#5-domain-model--invariants)
+  - [5.1 Entity relationships](#51-entity-relationships)
+  - [5.2 System invariants (each enforced in the database, not just the service)](#52-system-invariants-each-enforced-in-the-database-not-just-the-service)
+- [6. Database Schema](#6-database-schema)
+  - [users](#users)
+  - [vehicles](#vehicles)
+  - [locations — PRD Section 12 reference data (formerly zones)](#locations--prd-section-12-reference-data-formerly-zones)
+  - [routes — the overlap model (formerly corridors)](#routes--the-overlap-model-formerly-corridors)
+  - [route_stops — ordered chain of locations](#route_stops--ordered-chain-of-locations)
+  - [route_segments — the editable source of distances](#route_segments--the-editable-source-of-distances)
+  - [ride_requests — the original ask (immutable after creation)](#ride_requests--the-original-ask-immutable-after-creation)
+  - [pools — the sharing unit and the lifecycle owner](#pools--the-sharing-unit-and-the-lifecycle-owner)
+  - [passenger_rides — a request's membership in a pool](#passenger_rides--a-requests-membership-in-a-pool)
+  - [payments — settlement bookkeeping (PRD Section 8.4)](#payments--settlement-bookkeeping-prd-section-84)
+  - [ride_events — append-only audit (PRD Section 13)](#ride_events--append-only-audit-prd-section-13)
+
+---
+
 ## 5. Domain Model & Invariants
 
 ### 5.1 Entity relationships
@@ -11,7 +31,7 @@ ride_requests 1 ──── 1 passenger_rides                     (PRD Section 
 pools 1 ──── N passenger_rides                             (pool membership)
 passenger_rides 1 ──── 1 payments                          (settlement)
 pools / passenger_rides / ride_requests 1 ──── N ride_events (append-only audit)
-zones ──── corridor_stops ──── corridors ──── corridor_segments   (route/overlap reference data)
+locations ──── route_stops ──── routes ──── route_segments   (route/overlap reference data)
 ```
 
 The **RideRequest vs PassengerRide** split (PRD Section 5) is preserved: `ride_requests` stores the original ask (pickup, destination, seats, payment method, solo estimate) and is immutable after creation; `passenger_rides` stores the request's participation in a specific pool (seats, live fare, cancel/complete flags).
@@ -33,7 +53,7 @@ The **RideRequest vs PassengerRide** split (PRD Section 5) is preserved: `ride_r
 
 ## 6. Database Schema
 
-All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables (zones/corridors) use small identity ints. All timestamps are `TIMESTAMPTZ` (UTC). All money is `BIGINT` paisa.
+All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables (locations/routes) use small identity ints. All timestamps are `TIMESTAMPTZ` (UTC). All money is `BIGINT` paisa.
 
 ### users
 
@@ -58,7 +78,7 @@ All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables 
 | status | TEXT | NOT NULL, DEFAULT 'OFFLINE', CHECK `status IN ('ONLINE','OFFLINE')` |
 | created_at / updated_at | TIMESTAMPTZ | |
 
-### zones — PRD Section 12 reference data
+### locations — PRD Section 12 reference data (formerly zones)
 
 | column | type | constraints |
 |---|---|---|
@@ -66,7 +86,7 @@ All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables 
 | name | TEXT | NOT NULL, UNIQUE (Banani, Gulshan, …) |
 | lat / lng | NUMERIC(9,6) | NOT NULL (representative coords, kept for display/future use) |
 
-### corridors — the overlap model (PRD Section 7.2 made explicit)
+### routes — the overlap model (formerly corridors)
 
 | column | type | constraints |
 |---|---|---|
@@ -74,27 +94,27 @@ All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables 
 | code | TEXT | NOT NULL, UNIQUE (e.g. `banani-south`) |
 | name | TEXT | NOT NULL |
 
-### corridor_stops — ordered chain of zones
+### route_stops — ordered chain of locations
 
 | column | type | constraints |
 |---|---|---|
-| corridor_id | INT | FK → corridors |
-| zone_id | INT | FK → zones |
+| route_id | INT | FK → routes |
+| location_id | INT | FK → locations |
 | position | INT | NOT NULL, CHECK `position >= 1` |
 
-PK `(corridor_id, position)`; UNIQUE `(corridor_id, zone_id)`. Corridors are **directed** (a southbound chain serves southbound pairs; the reverse direction is seeded as its own corridor).
+PK `(route_id, position)`; UNIQUE `(route_id, location_id)`. Routes are **directed** (a southbound chain serves southbound pairs; the reverse direction is seeded as its own route).
 
-### corridor_segments — the editable source of distances
+### route_segments — the editable source of distances
 
 | column | type | constraints |
 |---|---|---|
-| corridor_id | INT | FK → corridors |
-| from_zone_id / to_zone_id | INT | FK → zones (consecutive stops: `to.position = from.position + 1`) |
+| route_id | INT | FK → routes |
+| from_location_id / to_location_id | INT | FK → locations (consecutive stops: `to.position = from.position + 1`) |
 | distance_m | INT | NOT NULL, CHECK `distance_m > 0` (integer meters) |
 
-PK `(corridor_id, from_zone_id, to_zone_id)`.
+PK `(route_id, from_location_id, to_location_id)`.
 
-**Seed integrity rule:** a zone pair's distance must be identical on every corridor containing it (Banani→Gulshan is 2000 m on `banani-south`, `banani-east`, and `uttara-spine`). The seed script asserts this and a unit test re-checks it — this makes each member's *leg distance corridor-invariant*, so fares never depend on which corridor a matching query happened to use.
+**Seed integrity rule:** a location pair's distance must be identical on every route containing it (Banani→Gulshan is 2000 m on `banani-south`, `banani-east`, and `uttara-spine`). The seed script asserts this and a unit test re-checks it — this makes each member's *leg distance route-invariant*, so fares never depend on which route a matching query happened to use.
 
 ### ride_requests — the original ask (immutable after creation)
 
@@ -102,7 +122,7 @@ PK `(corridor_id, from_zone_id, to_zone_id)`.
 |---|---|---|
 | id | UUID | PK |
 | passenger_id | UUID | NOT NULL, FK → users |
-| pickup_zone_id / dest_zone_id | INT | NOT NULL, FK → zones, CHECK `pickup_zone_id <> dest_zone_id` |
+| pickup_location_id / dest_location_id | INT | NOT NULL, FK → locations, CHECK `pickup_location_id <> dest_location_id` |
 | seats | INT | NOT NULL, CHECK `seats BETWEEN 1 AND 4` |
 | payment_method | TEXT | NOT NULL, DEFAULT 'CASH', CHECK `IN ('CASH','TESLAPAY')` |
 | estimate_fare_paisa | BIGINT | NOT NULL (solo estimate, frozen at creation) |
@@ -110,14 +130,14 @@ PK `(corridor_id, from_zone_id, to_zone_id)`.
 
 Index: `(passenger_id, created_at DESC)` — ride history.
 
-A request pair must lie on at least one corridor (`dest.position > pickup.position`); otherwise the API rejects with `ROUTE_NOT_SERVED` — the service only operates served routes ([`Architecture.md Section 4`](./Architecture.md#4-matching--pool-formation)).
+A request pair must lie on at least one route (`dest.position > pickup.position`); otherwise the API rejects with `ROUTE_NOT_SERVED` — the service only operates served routes ([`Architecture.md Section 4`](./Architecture.md#4-matching--pool-formation)).
 
 ### pools — the sharing unit and the lifecycle owner
 
 | column | type | constraints |
 |---|---|---|
 | id | UUID | PK |
-| pickup_zone_id | INT | NOT NULL, FK → zones |
+| pickup_location_id | INT | NOT NULL, FK → locations |
 | status | TEXT | NOT NULL, DEFAULT 'OPEN', CHECK `IN ('OPEN','MATCHED','DRIVER_ARRIVED','STARTED','COMPLETED','CANCELLED')` |
 | driver_id | UUID | NULL, FK → users (set at accept) |
 | vehicle_id | UUID | NULL, FK → vehicles (set at accept) |
@@ -126,7 +146,7 @@ A request pair must lie on at least one corridor (`dest.position > pickup.positi
 | created_at / updated_at | TIMESTAMPTZ | |
 
 Indexes:
-- `(status, pickup_zone_id)` — matching & driver listings
+- `(status, pickup_location_id)` — matching & driver listings
 - `UNIQUE (driver_id) WHERE status IN ('MATCHED','DRIVER_ARRIVED','STARTED')` — one active pool per driver
 - `(created_at)` — deterministic ordering for matching (earliest pool first)
 

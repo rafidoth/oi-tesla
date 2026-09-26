@@ -1,5 +1,14 @@
 # Technology Stack & Justification
 
+## Table of Contents
+
+- [Technology Choices & Rationale](#technology-choices--rationale)
+- [API Architecture Style](#api-architecture-style)
+
+---
+
+## Technology Choices & Rationale
+
 | Layer | Pick | Why this over the alternatives |
 |---|---|---|
 | Frontend | **Next.js (App Router) + TypeScript** | Mandated stack; App Router gives file-based routing, layouts for the passenger/driver role split, and SSR for fast first paint. The repo already scaffolds `client/` as a standalone Next.js + TS app (see note in [`Architecture.md Section 9`](./Architecture.md#9-frontend-architecture)). |
@@ -8,9 +17,13 @@
 | ORM | **Drizzle** | TypeScript-native, SQL-first schema definitions in `src/db/schema/`; auto-generated migrations via Drizzle Kit (`drizzle-kit generate / migrate`); fully typed client without heavy generated binary overhead; transparent transaction support wrapping the join/accept/cancel flows. The guarded counter uses Drizzle's `sql` tagged template directly inside transactions for atomic execution with bound parameters ([`Architecture.md Section 5`](./Architecture.md#5-capacity--concurrency)). |
 | Auth | **JWT (HS256) Bearer** | Stateless — no session store, survives free-tier spin-downs, no cross-origin cookie configuration between the Vercel and Render domains, and no CSRF surface. Tradeoffs (no revocation, 24h expiry) documented in [`Architecture.md Section 7`](./Architecture.md#7-security--authorization). |
 | Validation | **Zod** | One schema language for every body/param/query, colocated with each module; produces typed parse results, so validation and typing cannot drift apart. |
-| Tests | **Vitest + Supertest** | Vitest is TS-native and fast; unit tests cover the pure fare/matching/state functions (PRD Section 15 testability); Supertest drives the real Express app against a throwaway Postgres for integration tests — including a real concurrent race for the final seat ([`Architecture.md Section 10`](./Architecture.md#10-testing-strategy)). |
+| Tests | **Vitest** | Vitest is TS-native and fast; automated unit tests strictly cover pure domain logic (fare calculation, matching rules, state machine transitions, seed integrity per PRD Section 15). All authentication, API endpoints, role gates, and UI screens are validated through manual testing ([`Architecture.md Section 10`](./Architecture.md#10-testing-strategy)). |
 | Logging | **pino + pino-http** | Structured JSON logs with request IDs at negligible overhead; transition logs satisfy PRD Section 15 (`timestamp, actor, entity, previous state, new state`). |
 | Money | **integer paisa (`BIGINT`)** | PRD Section 8.3. No floats anywhere in fare math; proportional splits use integer arithmetic with largest-remainder rounding ([`Architecture.md Section 6`](./Architecture.md#6-fare-engine--payments)). |
 | Packaging | **Docker Compose** | `db` + `migrate/seed` + `api` + `web`, health-checked, one command ([`Architecture.md Section 11`](./Architecture.md#11-docker--local-development)). |
+
+---
+
+## API Architecture Style
 
 API style: **REST** — see [`API.md`](./API.md).

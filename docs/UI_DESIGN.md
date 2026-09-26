@@ -196,6 +196,41 @@ components:
 
 # Dhaka Tesla Pool
 
+## Table of Contents
+
+- [Overview](#overview)
+- [1. Colors](#1-colors)
+  - [Brand](#brand)
+  - [Ride-State Colors](#ride-state-colors)
+  - [Neutrals](#neutrals)
+- [2. Typography](#2-typography)
+  - [Font Family](#font-family)
+  - [Hierarchy](#hierarchy)
+  - [Principles](#principles)
+- [3. Layout](#3-layout)
+  - [Spacing](#spacing)
+  - [Screen Composition](#screen-composition)
+  - [Alignment](#alignment)
+- [4. Elevation & Depth](#4-elevation--depth)
+- [5. Shapes](#5-shapes)
+- [6. Components](#6-components)
+  - [Buttons](#buttons)
+  - [Status Badge](#status-badge)
+  - [Seat Meter](#seat-meter)
+  - [Fare Display](#fare-display)
+  - [Cards](#cards)
+  - [Forms](#forms)
+  - [Driver Console](#driver-console)
+  - [System States](#system-states)
+- [7. Do's and Don'ts](#7-dos-and-donts)
+  - [Do](#do)
+  - [Don't](#dont)
+- [8. Responsive Behavior](#8-responsive-behavior)
+- [9. Open Decisions](#9-open-decisions)
+- [10. Iteration Guide](#10-iteration-guide)
+
+---
+
 ## Overview
 
 This is a **product design system**, not a marketing-site one — Dhaka Tesla Pool's UI surface is the passenger dashboard, the ride tracker, and the driver console described in `Architecture.md` §14, not a landing page with a hero and a logo wall. Every decision here optimizes for the thing this app actually is: something a passenger checks anxiously while standing on a curb in Dhaka heat, and something a driver glances at between fares, often on a low-cost Android phone.

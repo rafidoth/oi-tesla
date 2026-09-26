@@ -5,6 +5,44 @@
 
 ---
 
+## Table of Contents
+
+- [1. Purpose & Scope](#1-purpose--scope)
+- [2. System Context](#2-system-context)
+- [3. Lifecycle & State Machines](#3-lifecycle--state-machines)
+  - [3.1 Pool state machine (source of truth, D4)](#31-pool-state-machine-source-of-truth-d4)
+  - [3.2 Derived passenger ride status (no stored per-ride state)](#32-derived-passenger-ride-status-no-stored-per-ride-state)
+  - [3.3 Enforcement](#33-enforcement)
+- [4. Matching & Pool Formation](#4-matching--pool-formation)
+  - [4.1 The route model (D8)](#41-the-route-model-d8)
+  - [4.2 Pairwise compatibility](#42-pairwise-compatibility)
+  - [4.3 Formation flow (eager, deterministic — D1, D6)](#43-formation-flow-eager-deterministic--d1-d6)
+  - [4.4 Driver accept flow](#44-driver-accept-flow)
+- [5. Capacity & Concurrency](#5-capacity--concurrency)
+  - [5.1 The guarded counter (D5)](#51-the-guarded-counter-d5)
+  - [5.2 Race scenarios mapped (PRD Section 14)](#52-race-scenarios-mapped-prd-section-14)
+- [6. Fare Engine & Payments](#6-fare-engine--payments)
+  - [6.1 Formula (D7)](#61-formula-d7)
+  - [6.2 Lifecycle of a fare](#62-lifecycle-of-a-fare)
+  - [6.3 Rounding — largest remainder](#63-rounding--largest-remainder)
+  - [6.4 Worked example — Banani Rush Hour (PRD Section 18)](#64-worked-example--banani-rush-hour-prd-section-18)
+- [7. Security & Authorization](#7-security--authorization)
+  - [7.1 Authentication](#71-authentication)
+  - [7.2 Authorization (server-side only — PRD Section 11)](#72-authorization-server-side-only--prd-section-11)
+  - [7.3 Hardening](#73-hardening)
+- [8. Observability](#8-observability)
+- [9. Frontend Architecture](#9-frontend-architecture)
+  - [9.1 Route map](#91-route-map)
+  - [9.2 Data & state](#92-data--state)
+  - [9.3 Components](#93-components)
+- [10. Testing Strategy](#10-testing-strategy)
+- [11. Docker & Local Development](#11-docker--local-development)
+- [12. Deployment](#12-deployment)
+- [13. PRD Deviations & Clarifications](#13-prd-deviations--clarifications)
+- [14. Acceptance Walkthrough (PRD Section 18 mapped)](#14-acceptance-walkthrough-prd-section-18-mapped)
+
+---
+
 ## 1. Purpose & Scope
 
 This document defines the system architecture for the Dhaka Tesla Pool MVP:
@@ -13,7 +51,7 @@ This document defines the system architecture for the Dhaka Tesla Pool MVP:
 - Technology stack and justification of every pick
 - Database schema (tables, constraints, indexes, relationships)
 - Ride/pool lifecycle state machines and their enforcement
-- Deterministic matching and pool formation (corridor model)
+- Deterministic matching and pool formation (route model)
 - Capacity enforcement under concurrency
 - Fare engine and payment simulation
 - REST API design, auth, validation, error handling
@@ -45,7 +83,7 @@ Non-goals from `PRD Section 20` (GPS, routing APIs, real payments, ratings, surg
                 │  Express API (TypeScript)             │
                 │  Render / Docker                      │
                 │  · auth, rides, pools, driver,        │
-                │    payments, zones                    │
+                │    payments, locations, routes        │
                 │  · matching · fare engine ·           │
                 │    state machine · capacity guard     │
                 │  · Zod validation · RBAC · audit log  │
@@ -116,11 +154,11 @@ This reproduces PRD Section 6 exactly: passengers sit in `REQUESTED` while their
 
 ## 4. Matching & Pool Formation
 
-### 4.1 The corridor model (D8)
+### 4.1 The route model (D8)
 
 Compatibility is **data**, seeded and inspectable:
 
-| Corridor | Chain (ordered stops) | Segments |
+| Route | Chain (ordered stops) | Segments |
 |---|---|---|
 | `banani-south` (C1) | Banani → Gulshan → Mohakhali | B→G 2000 m, G→M 3000 m |
 | `banani-east` (C2) | Banani → Gulshan → Bashundhara | B→G 2000 m, G→Ba 3100 m |
@@ -128,16 +166,16 @@ Compatibility is **data**, seeded and inspectable:
 | `mirpur-central` (C4) | Mirpur → Farmgate → Dhanmondi | Mi→F 5000 m, F→D 3000 m |
 | `mohakhali-north` (C5) | Mohakhali → Gulshan → Banani | M→G 3000 m, G→B 2000 m |
 
-"Banani→Gulshan **overlaps** Banani→Mohakhali" is now a stored fact: the B→G segment is a prefix of the B→M route on C1 — the vehicle literally passes Gulshan en route, and Gulshan passengers alight mid-chain. That geographic overlap *is* the pooling justification, and it reproduces PRD Section 7.2's matrix exactly: Gulshan↔Mohakhali compatible (C1), Gulshan↔Bashundhara compatible (C2), Mohakhali↔Bashundhara **not** compatible (no shared corridor) — and the PRD never claims they are.
+"Banani→Gulshan **overlaps** Banani→Mohakhali" is now a stored fact: the B→G segment is a prefix of the B→M route on C1 — the vehicle literally passes Gulshan en route, and Gulshan passengers alight mid-chain. That geographic overlap *is* the pooling justification, and it reproduces PRD Section 7.2's matrix exactly: Gulshan↔Mohakhali compatible (C1), Gulshan↔Bashundhara compatible (C2), Mohakhali↔Bashundhara **not** compatible (no shared route) — and the PRD never claims they are.
 
-A zone pair is **served** iff some corridor contains both zones with the destination strictly downstream of the pickup. Requests on unserved pairs are rejected (`ROUTE_NOT_SERVED`) — the service does not guess distances (see [Section 13](#13-prd-deviations--clarifications) on why straight-line Section 12 coords are not used).
+A location pair is **served** iff some route contains both locations with the destination strictly downstream of the pickup. Requests on unserved pairs are rejected (`ROUTE_NOT_SERVED`) — the service does not guess distances (see [Section 13](#13-prd-deviations--clarifications) on why straight-line Section 12 coords are not used).
 
 ### 4.2 Pairwise compatibility
 
 Request R is compatible with existing member M iff:
 
-1. same **pickup zone** (D11 — no mid-chain pickups), and
-2. ∃ a corridor containing the pickup with **both** destinations strictly downstream.
+1. same **pickup location** (D11 — no mid-chain pickups), and
+2. ∃ a route containing the pickup with **both** destinations strictly downstream.
 
 A pool accepts R iff R is compatible with **every** active member. This "all-pairs" rule blocks the transitivity leak: `{Gulshan, Mohakhali}` on C1 cannot admit a Bashundhara request even though a bare Gulshan request would be compatible with either.
 
@@ -146,17 +184,17 @@ A pool accepts R iff R is compatible with **every** active member. This "all-pai
 ```text
 POST /api/rides
   │
-  ├─ validate: zones exist, pickup ≠ dest, pair served by ≥1 corridor, seats 1..4
+  ├─ validate: locations exist, pickup ≠ dest, pair served by ≥1 route, seats 1..4
   ├─ compute solo estimate (fare engine, Section 6) → ride_requests row
   │
   ├─ MATCHING (service, pure & unit-tested):
   │    candidates = pools
   │      WHERE status IN ('OPEN','MATCHED')          -- joinable window (D3)
-  │        AND pickup_zone_id = R.pickup_zone_id
+  │        AND pickup_location_id = R.pickup_location_id
   │        AND occupied_seats + R.seats <= capacity
   │      ORDER BY created_at ASC, id ASC              -- deterministic: earliest first
   │    for each candidate (small N, in-memory check):
-  │      keep iff ∃ corridor containing pickup + R.dest + all active member dests
+  │      keep iff ∃ route containing pickup + R.dest + all active member dests
   │
   ├─ first keeper → JOIN:  guarded UPDATE + member INSERT + fare recompute (Section 5, Section 6)
   └─ no keeper    → CREATE pool: status OPEN, capacity = NOMINAL_POOL_CAPACITY (3),
@@ -209,7 +247,7 @@ Why this is airtight:
 
 | Edge case | Outcome under this design |
 |---|---|
-| Two passengers race for the final seat | Serialised by the guarded UPDATE; loser gets `409 POOL_FULL`; final occupancy ≤ capacity — **integration-tested with real parallel requests** ([Section 10](#10-testing-strategy)) |
+| Two passengers race for the final seat | Serialised by the guarded UPDATE; loser gets `409 POOL_FULL`; final occupancy ≤ capacity — guaranteed by the atomic UPDATE and DB CHECK constraint ([Section 5.1](#51-concurrency-primitive--the-guarded-atomic-update)) |
 | Duplicate acceptance (same passenger twice in a pool) | Partial unique index `(pool_id, passenger_id) WHERE cancelled_at IS NULL`; second INSERT aborts its transaction |
 | Join attempted after `STARTED` | Status predicate inside the guarded UPDATE fails → `422` |
 | Cancel + concurrent join for the released seat | Cancel commits first (seat freed) → join's guard passes, or join ran first (pool full) → cancel still fine; either serialization is correct |
@@ -226,7 +264,7 @@ Why this is airtight:
 All math in **integer paisa** and **integer meters** — no floats (PRD Section 8.3).
 
 ```text
-leg(member)        = corridor distance pickup_zone → member dest_zone, in meters   (corridor-invariant, Section 4.1)
+leg(member)        = route distance pickup_location → member dest_location, in meters   (route-invariant, Section 4.1)
 tripDistance(pool) = max(leg(member) for active members)      (the farthest stop — how far the vehicle drives)
 poolTotal          = FARE_BASE_PAISA + FARE_PER_KM_PAISA × tripDistance / 1000
                                                                 (meters → km; the seed's 100 m granularity
@@ -313,7 +351,7 @@ Data-visibility rules are structural: the passenger ride payload contains no oth
 app/
   page.tsx                    landing → redirects by role
   (auth)/login, (auth)/register
-  (passenger)/dashboard       my rides + new request form (zones from GET /api/zones,
+  (passenger)/dashboard       my rides + new request form (locations from GET /api/locations,
                               live estimate preview)
   (passenger)/rides/[id]      ride tracking: derived status badge, own fare,
                               cancel (while permitted), TeslaPay pay button
@@ -330,19 +368,32 @@ app/
 
 ### 9.3 Components
 
-Small presentational components over a thin feature layer: `StatusBadge` (derived ride status), `SeatMeter` (occupied/capacity — the capacity invariant made visible), `ZoneSelect` (served pairs only), `FareEstimate`, `RideCard`, `PoolCard`, `RosterTable` (driver-only fares). Business rules (when cancel is legal, which lifecycle button is next) come from the server's derived status — the client never re-implements the state machine.
+Small presentational components over a thin feature layer: `StatusBadge` (derived ride status), `SeatMeter` (occupied/capacity — the capacity invariant made visible), `LocationSelect` (served pairs only), `FareEstimate`, `RideCard`, `PoolCard`, `RosterTable` (driver-only fares). Business rules (when cancel is legal, which lifecycle button is next) come from the server's derived status — the client never re-implements the state machine.
+
+### 9.4 Feature-Sliced Directory Structure
+
+To keep the frontend scalable as the codebase expands, domain logic is sliced under `client/features/<feature>/`:
+- `api/`: Endpoint callers (`*.api.ts`) and mock adapters.
+- `hooks/`: React Query hooks (`use*Query`, `use*Mutation`).
+- `store/`: Zustand state slices owned by this feature.
+- `types/`: Domain models, request/response DTOs (`*.types.ts`).
+- `components/`: Feature-specific forms, guards, and interactive widgets.
+- `index.ts`: Public barrel exports.
+
+Shared UI primitives reside in `client/components/ui/` and `client/components/custom/`, while shared networking resides in `client/api/`.
 
 ---
 
 ## 10. Testing Strategy
 
+Automated testing in OiTesla is strictly scoped to **pure domain logic**. All other functionality—including authentication flows, API endpoints, role gates, integration lifecycles, and UI components—is verified via manual testing.
+
 | Layer | Tool | What it proves |
 |---|---|---|
-| Unit | Vitest | **Fare engine**: exact splits, largest-remainder ties, sum == total; **matching**: pairwise rule, transitivity leak blocked, earliest-pool determinism, unserved pairs; **state machine**: exhaustive legal/illegal edges incl. all PRD Section 6 examples; **seed integrity**: corridor distance consistency |
-| Integration | Vitest + Supertest against a throwaway Docker Postgres | Auth flows; **the full Banani Rush Hour acceptance scenario (PRD Section 18) as one test** — 3 joins, 4th rejected, lifecycle walk, frozen fares, payments; **capacity race**: N parallel join/accept requests for the final seat → exactly one 2xx, rest `409`, final `occupied_seats ≤ capacity`; cancel → seat refill; duplicate membership; authorization (passenger B cannot read/cancel passenger A's ride → 404/403) |
-| Contract | Same integration suite | The duplicated client DTO types stay honest (responses match the shapes the client types declare) |
+| Unit | Vitest | **Fare engine**: exact splits, largest-remainder ties, sum == total; **matching**: pairwise rule, transitivity leak blocked, earliest-pool determinism, unserved pairs; **state machine**: exhaustive legal/illegal edges incl. all PRD Section 6 examples; **seed integrity**: route distance consistency |
+| Manual | Manual Verification | **Auth & Role Gates**: User registration, login, JWT validation, passenger/driver role restrictions; **API Endpoints**: Request lifecycles, cancellation rules, cash & TeslaPay settlement; **UI & Navigation**: Passenger and driver dashboard workflows, real-time polling updates, error banners, and loading states |
 
-Determinism (PRD Section 15): fare and matching outputs are pure functions of (request, config, corridor data) — no clocks, no randomness.
+Determinism (PRD Section 15): fare and matching outputs are pure functions of (request, config, route data) — no clocks, no randomness.
 
 ---
 
@@ -363,7 +414,7 @@ services:
 
 - **`.env.example`** at root (committed): `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=24h`, `CLIENT_ORIGIN`, `FARE_BASE_PAISA=5000`, `FARE_PER_KM_PAISA=2000`, `NOMINAL_POOL_CAPACITY=3`.
 - **Migrations** are files in `server/src/db/migrations` — generated by `drizzle-kit generate` and applied by the `migrate` service (`drizzle-kit migrate`) before the API starts; the compose dependency chain makes a cold `up` fully reproducible.
-- **Seed** (`npm run db:seed` / `src/db/seed.ts`): 8 zones with Section 12 coordinates; corridors C1–C5 with consistent segment distances; **Jashim** (driver, vehicle **Bullet**, capacity 3, ONLINE), passengers **Nusrat, Rafiq, Shirin** (+ **Tanjim** for the 4th-passenger rejection), demo password documented in the README. Seed is idempotent.
+- **Seed** (`npm run db:seed` / `src/db/seed.ts`): 8 locations with Section 12 coordinates; routes C1–C5 with consistent segment distances; **Jashim** (driver, vehicle **Bullet**, capacity 3, ONLINE), passengers **Nusrat, Rafiq, Shirin** (+ **Tanjim** for the 4th-passenger rejection), demo password documented in the README. Seed is idempotent.
 - **`make demo`**: replays PRD Section 18 (Step 1–8) against the running stack via the API, printing pool occupancy and fares at each step — the acceptance scenario reproducible from a clean database (PRD Section 19).
 - `make up / make test / make seed / make demo`.
 
@@ -391,12 +442,12 @@ Every place this architecture departs from — or pins down — the PRD, made ex
 | # | Topic | PRD says | This design | Why |
 |---|---|---|---|---|
 | 1 | Fare formula (Section 8.1–8.2) | Per-passenger `base + distance×rate − poolDiscount` | **Superseded**: vehicle-trip total (`base + perKm × pickup→farthest-dest`) split ∝ each member's leg; sharing itself is the discount | Product decision from the design review. Still satisfies Section 8.2's letter and spirit — fares are individual and **not** an equal split; each passenger's share scales with their own leg; every value stays config-driven; the model is deterministic and unit-tested |
-| 2 | Distance source (Section 12) | Straight-line *or* predefined zone distances | **Seeded corridor segment distances**; Section 12 coordinates kept on `zones` for display | Straight-line Banani→Gulshan is ~0.18 km → a 3.60 BDT distance charge; the PRD itself permits predefined distances, and the corridor model stores the overlap relationships the matching needs anyway |
+| 2 | Distance source (Section 12) | Straight-line *or* predefined zone distances | **Seeded route segment distances**; Section 12 coordinates kept on `locations` for display | Straight-line Banani→Gulshan is ~0.18 km → a 3.60 BDT distance charge; the PRD itself permits predefined distances, and the route model stores the overlap relationships the matching needs anyway |
 | 3 | MATCHED semantics (Section 6 vs Step 1/2 vs FR-D07) | Ambiguous | `MATCHED` = driver accepted the pool; pooling itself is eager and leaves rides in `REQUESTED` | The only reading that reconciles all three PRD anchors (Section 7.2, D1–D2) |
 | 4 | Pool states (Section 3.4, Section 6) | Pool contains "one assigned driver" | Pools gain an `OPEN` (awaiting-driver) state | Required by eager formation — PRD Step 2 shows a driverless pool |
 | 5 | Driver cancellation (Section 3.2 "cancel/reject when permitted") | Unspecified | Decline `OPEN` pools only; no cancel-after-accept | Smallest well-defined rule; post-accept driver cancellation harms committed passengers — future work |
 | 6 | Cancellation rules (Section 6 "defined later") | Open | Cancel only before `DRIVER_ARRIVED`; seat freed; last member out soft-cancels the pool; actor always recorded | Pinned in the design review (D10); keeps Section 13 audit complete |
-| 7 | Served routes | — | Requests on zone pairs with no corridor are rejected `ROUTE_NOT_SERVED` | Deterministic fares require known distances; the seed covers all demo-relevant pairs; auto-generated corridors are future work |
+| 7 | Served routes | — | Requests on location pairs with no route are rejected `ROUTE_NOT_SERVED` | Deterministic fares require known distances; the seed covers all demo-relevant pairs; auto-generated routes are future work |
 | 8 | Real-time status | "passengers see status" | 5s polling, no push | PRD never requires push; free-tier hosting punishes persistent connections |
 | 9 | Payments (Section 8.4) | States PENDING/PAID/FAILED | Payment rows created at `COMPLETED` only | Long-lived PENDING rows for cancelled rides would need cleanup; payments never gate the lifecycle |
 
