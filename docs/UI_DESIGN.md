@@ -1,113 +1,134 @@
+```yaml
 ---
 version: alpha
 name: Dhaka Tesla Pool
-description: "Dhaka Tesla Pool's product surface is warm, high-energy and street-smart: a bright marigold accent and a teal 'in-motion' signal sit on a warm paper-white canvas, echoing the hand-painted, sun-bright liveries of Dhaka's battery rickshaws without turning the app itself into a carnival. Space Grotesk carries display type and the big fare numbers with a geometric, faintly electric edge; Manrope carries every UI label and paragraph for maximum legibility at small sizes on cheap Android screens. Every ride state — waiting, matched, driver arrived, in progress, done, cancelled — gets its own fixed, calm color, so a glance at a list tells the whole story before you read a word. Corners are friendly and rounded (6–16px, pills for status and chips), elevation is mostly flat-with-hairline, and shadow is spent in exactly two places: cards, and the sticky mobile action bar."
+description: "A minimal, Uber-inspired light-mode product interface for Dhaka Tesla Pool. The visual system is built around black, white, and restrained neutral grays. Manrope is the only typeface across the entire product. Strong color is reserved for meaningful system states; the brand itself does not use a colorful accent. Layouts remain spacious, functional, and highly scannable on low-cost mobile devices."
 colors:
-  primary: "#FF8A1E"
-  primary-strong: "#E86F00"
-  primary-surface: "#FFF1DE"
-  on-primary: "#241A0E"
-  teal: "#0EA5A0"
-  teal-strong: "#0B7F7B"
-  teal-surface: "#E3F7F6"
-  accent-amber: "#F2B705"
-  accent-amber-surface: "#FFF6D8"
-  accent-green: "#1FAE55"
-  accent-green-surface: "#E1F7E9"
-  accent-slate: "#5B6570"
-  accent-slate-surface: "#E9ECEF"
-  accent-red: "#E5484D"
-  accent-red-surface: "#FDE8E8"
-  ink: "#201A15"
-  ink-secondary: "#6B6259"
-  muted: "#A79E93"
-  surface: "#FFFDFA"
-  surface-subtle: "#F7F3EC"
-  surface-dark: "#171310"
+  black: "#000000"
+  black-soft: "#171717"
+  white: "#FFFFFF"
+
+  ink: "#171717"
+  ink-secondary: "#6B6B6B"
+  muted: "#A3A3A3"
+
+  surface: "#FFFFFF"
+  surface-subtle: "#F6F6F6"
+  surface-muted: "#EEEEEE"
+
+  border: "#E5E5E5"
+  border-strong: "#D1D1D1"
+
+  success: "#16803C"
+  success-surface: "#EAF6EE"
+
+  warning: "#B77900"
+  warning-surface: "#FFF5DB"
+
+  error: "#D92D20"
+  error-surface: "#FDECEA"
+
+  info: "#276EF1"
+  info-surface: "#EDF3FF"
+
 typography:
   display-hero:
-    fontFamily: Space Grotesk
-    fontSize: 48px
+    fontFamily: Manrope
+    fontSize: 44px
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: -1px
+
   display-md:
-    fontFamily: Space Grotesk
-    fontSize: 34px
+    fontFamily: Manrope
+    fontSize: 32px
     fontWeight: 700
     lineHeight: 1.15
-    letterSpacing: -0.5px
+    letterSpacing: -0.75px
+
   title-lg:
-    fontFamily: Space Grotesk
+    fontFamily: Manrope
     fontSize: 24px
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1.25
-    letterSpacing: -0.25px
+    letterSpacing: -0.3px
+
   title-md:
     fontFamily: Manrope
     fontSize: 20px
     fontWeight: 700
     lineHeight: 1.3
     letterSpacing: normal
+
   title-sm:
     fontFamily: Manrope
     fontSize: 16px
     fontWeight: 700
     lineHeight: 1.4
     letterSpacing: normal
+
   body:
     fontFamily: Manrope
     fontSize: 16px
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: normal
+
   body-medium:
     fontFamily: Manrope
     fontSize: 16px
     fontWeight: 500
     lineHeight: 1.5
     letterSpacing: normal
+
   body-strong:
     fontFamily: Manrope
     fontSize: 16px
     fontWeight: 700
     lineHeight: 1.5
     letterSpacing: normal
+
   body-sm:
     fontFamily: Manrope
     fontSize: 14px
-    fontWeight: 500
-    lineHeight: 1.45
+    fontWeight: 600
+    lineHeight: 1.4
     letterSpacing: normal
+
   body-sm-regular:
     fontFamily: Manrope
     fontSize: 14px
     fontWeight: 400
     lineHeight: 1.45
     letterSpacing: normal
+
   caption:
     fontFamily: Manrope
     fontSize: 12px
     fontWeight: 600
     lineHeight: 1.3
-    letterSpacing: 0.2px
+    letterSpacing: 0.1px
+
   fare-display:
-    fontFamily: Space Grotesk
+    fontFamily: Manrope
     fontSize: 28px
     fontWeight: 700
     lineHeight: 1.1
-    letterSpacing: normal
+    letterSpacing: -0.5px
+
   fare-display-sm:
-    fontFamily: Space Grotesk
+    fontFamily: Manrope
     fontSize: 16px
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: normal
+
 rounded:
   sm: 6px
-  md: 10px
-  lg: 16px
+  md: 8px
+  lg: 12px
   pill: 9999px
+
 spacing:
   xs: 4px
   sm: 8px
@@ -117,319 +138,978 @@ spacing:
   2xl: 32px
   3xl: 48px
   4xl: 64px
+
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.black}"
+    textColor: "{colors.white}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
-    padding: 10px 20px
+    minHeight: 40px
+    padding: 8px 16px
+
   button-secondary:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.white}"
     textColor: "{colors.ink}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
-    borderColor: "{colors.ink}"
+    borderColor: "{colors.border-strong}"
     borderWidth: 1px
+    minHeight: 40px
+    padding: 8px 16px
+
   button-ghost:
     backgroundColor: transparent
     textColor: "{colors.ink-secondary}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
-    padding: 8px 12px
+    minHeight: 36px
+    padding: 6px 10px
+
   card:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
-    boxShadow: rgba(32, 26, 21, 0.03) 0px 1px 2px 0px, rgba(32, 26, 21, 0.04) 0px 6px 16px 0px
+    borderColor: "{colors.border}"
+    borderWidth: 1px
     padding: 16px
+
   card-elevated:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
-    boxShadow: rgba(32, 26, 21, 0.05) 0px 4px 10px 0px, rgba(32, 26, 21, 0.08) 0px 16px 40px 0px
+    boxShadow: rgba(0, 0, 0, 0.08) 0px 4px 16px 0px
+    padding: 16px
+
   status-badge:
     typography: "{typography.caption}"
     rounded: "{rounded.pill}"
     padding: 4px 10px
-    note: "backgroundColor/textColor swap per ride state — see §2 Ride-State Colors"
+
   seat-meter:
-    filledColor: "{colors.primary}"
-    emptyColor: "{colors.surface-subtle}"
-    borderColor: "{colors.muted}"
+    filledColor: "{colors.black}"
+    emptyColor: "{colors.surface-muted}"
+    borderColor: "{colors.border-strong}"
     rounded: "{rounded.sm}"
+
   fare-display:
     textColor: "{colors.ink}"
     typography: "{typography.fare-display}"
     numericVariant: tabular-nums
+
   chip:
     backgroundColor: "{colors.surface-subtle}"
     textColor: "{colors.ink-secondary}"
     typography: "{typography.caption}"
     rounded: "{rounded.pill}"
-    padding: 4px 12px
+    padding: 4px 10px
+
   input:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.white}"
     textColor: "{colors.ink}"
     rounded: "{rounded.md}"
-    borderColor: "{colors.muted}"
+    borderColor: "{colors.border-strong}"
     borderWidth: 1px
-    padding: 10px 14px
+    minHeight: 42px
+    padding: 8px 12px
+
   navbar:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.white}"
     textColor: "{colors.ink}"
-    height: 60px
-    borderColor: "{colors.surface-subtle}"
+    height: 56px
+    borderColor: "{colors.border}"
     borderWidth: 1px
     position: sticky
+
   toggle-online:
-    onColor: "{colors.accent-green}"
-    offColor: "{colors.muted}"
-    knobColor: "{colors.surface}"
+    onColor: "{colors.black}"
+    offColor: "{colors.surface-muted}"
+    knobColor: "{colors.white}"
     rounded: "{rounded.pill}"
+
   table-row:
-    borderColor: "{colors.surface-subtle}"
+    borderColor: "{colors.border}"
     borderWidth: 1px
     padding: 12px 16px
+
   skeleton:
     backgroundColor: "{colors.surface-subtle}"
     rounded: "{rounded.sm}"
 ---
+```
 
 # Dhaka Tesla Pool
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [1. Colors](#1-colors)
-  - [Brand](#brand)
-  - [Ride-State Colors](#ride-state-colors)
-  - [Neutrals](#neutrals)
-- [2. Typography](#2-typography)
-  - [Font Family](#font-family)
-  - [Hierarchy](#hierarchy)
-  - [Principles](#principles)
-- [3. Layout](#3-layout)
-  - [Spacing](#spacing)
-  - [Screen Composition](#screen-composition)
-  - [Alignment](#alignment)
-- [4. Elevation & Depth](#4-elevation--depth)
-- [5. Shapes](#5-shapes)
-- [6. Components](#6-components)
-  - [Buttons](#buttons)
-  - [Status Badge](#status-badge)
-  - [Seat Meter](#seat-meter)
-  - [Fare Display](#fare-display)
-  - [Cards](#cards)
-  - [Forms](#forms)
-  - [Driver Console](#driver-console)
-  - [System States](#system-states)
-- [7. Do's and Don'ts](#7-dos-and-donts)
-  - [Do](#do)
-  - [Don't](#dont)
-- [8. Responsive Behavior](#8-responsive-behavior)
-- [9. Open Decisions](#9-open-decisions)
-- [10. Iteration Guide](#10-iteration-guide)
+* [Overview](#overview)
+* [1. Colors](#1-colors)
+
+  * [Brand Palette](#brand-palette)
+  * [Semantic Colors](#semantic-colors)
+  * [Neutrals](#neutrals)
+* [2. Typography](#2-typography)
+
+  * [Font Family](#font-family)
+  * [Hierarchy](#hierarchy)
+  * [Principles](#principles)
+* [3. Layout](#3-layout)
+
+  * [Spacing](#spacing)
+  * [Screen Composition](#screen-composition)
+  * [Alignment](#alignment)
+* [4. Elevation & Depth](#4-elevation--depth)
+* [5. Shapes](#5-shapes)
+* [6. Components](#6-components)
+
+  * [Buttons](#buttons)
+  * [Status Badge](#status-badge)
+  * [Seat Meter](#seat-meter)
+  * [Fare Display](#fare-display)
+  * [Cards](#cards)
+  * [Forms](#forms)
+  * [Driver Console](#driver-console)
+  * [System States](#system-states)
+* [7. Do's and Don'ts](#7-dos-and-donts)
+* [8. Responsive Behavior](#8-responsive-behavior)
+* [9. Open Decisions](#9-open-decisions)
+* [10. Iteration Guide](#10-iteration-guide)
 
 ---
 
 ## Overview
 
-This is a **product design system**, not a marketing-site one — Dhaka Tesla Pool's UI surface is the passenger dashboard, the ride tracker, and the driver console described in `Architecture.md` §14, not a landing page with a hero and a logo wall. Every decision here optimizes for the thing this app actually is: something a passenger checks anxiously while standing on a curb in Dhaka heat, and something a driver glances at between fares, often on a low-cost Android phone.
+Dhaka Tesla Pool uses a **minimal, monochrome product interface inspired by the visual restraint of Uber's consumer product**.
 
-The personality comes from the subject matter, not from SaaS convention. Dhaka's battery-run three-wheelers are colloquially called "Teslas" — a wink the product name already leans into — and they're visually loud: sun-bright hoods, hand-painted panels, vivid folk-art color. This system borrows the *energy* of that (one confident marigold accent, a teal "electric" signal) without borrowing the clutter — the app itself stays calm, legible, and quick to scan, because a pooled-ride app that's hard to read at a glance has failed at its one job.
+The interface is intentionally not colorful. Black provides the primary visual hierarchy, white provides the canvas, and neutral grays establish structure. Semantic colors appear only when the interface needs to communicate a system state such as success, warning, error, or active information.
 
-**Key characteristics:**
-- One warm, high-chroma brand accent (marigold) reserved strictly for actions — buttons, links, active states.
-- A fixed color for each of the six ride states (`REQUESTED` → `CANCELLED`), used nowhere else, so color always means the same thing.
-- Two typefaces: Space Grotesk for display type and fare numerals (a geometric, faintly electric edge), Manrope for everything else (built for legibility at 12–14px on cheap screens).
-- The seat meter and status badge are load-bearing UI, not decoration — they visualize the app's actual capacity invariant (`occupiedSeats ≤ capacity`) and lifecycle state, straight from `PRD.md` §6–7.
-- Mostly flat surfaces with hairlines; shadow is spent in exactly two places (cards, and the sticky mobile action bar) — never as ambient decoration.
-- Friendly, consistent rounding (6–16px, pills for badges/chips) — never sharp, never a single radius reused regardless of hierarchy.
-- Mobile-first, single-column by default; the one intentional two-column layout is the driver's roster view on wide screens.
+The design should feel:
 
-## 1. Colors
+* Fast
+* Clean
+* Functional
+* Spacious
+* Familiar
+* Easy to scan
+* Comfortable on inexpensive Android screens
 
-The palette has three tiers: one brand accent for actions, six fixed ride-state pairs for status, and a warm-neutral scale for everything else. There are no gradients.
+This is a **product UI**, not a marketing website.
 
-### Brand
-- **Marigold** (`{colors.primary}` — #FF8A1E): the only interactive accent. Primary buttons, links, active nav, focus rings.
-- **Marigold Strong** (`{colors.primary-strong}` — #E86F00): pressed/hover state.
-- **Marigold Surface** (`{colors.primary-surface}` — #FFF1DE): pale tint for selected rows/highlighted zones (e.g. the picked pickup zone in `ZoneSelect`).
-- **On Primary** (`{colors.on-primary}` — #241A0E): dark ink used *on* marigold fills — marigold is light enough that dark text, not white, is what actually passes contrast.
+There are no decorative gradients, colorful backgrounds, illustrations used as decoration, oversized visual treatments, or unnecessary component variants.
 
-### Ride-State Colors
-Each state in the ride lifecycle (`PRD.md` §6) gets one fixed color pair, used only for that state, everywhere in the app:
+The product's identity comes from its interaction model and content rather than a heavily branded visual layer.
 
-| State | Color | Surface token | Text token |
-|---|---|---|---|
-| `REQUESTED` (waiting) | Warm grey | `{colors.surface-subtle}` | `{colors.ink-secondary}` |
-| `MATCHED` (driver accepted) | Teal | `{colors.teal-surface}` | `{colors.teal-strong}` |
-| `DRIVER_ARRIVED` (act now) | Amber | `{colors.accent-amber-surface}` | `{colors.accent-amber}` on dark text |
-| `STARTED` (in motion) | Green | `{colors.accent-green-surface}` | `{colors.accent-green}` |
-| `COMPLETED` (settled) | Slate | `{colors.accent-slate-surface}` | `{colors.accent-slate}` |
-| `CANCELLED` (dead) | Red | `{colors.accent-red-surface}` | `{colors.accent-red}` |
+### Core principles
 
-`accent-red` doubles as the generic error/full-pool color (`POOL_FULL`, validation errors) — it's the only accent allowed outside its own status badge.
+* **Black means action.**
+* **White means space.**
+* **Gray means structure.**
+* **Semantic colors mean system state.**
+* **One typeface everywhere.**
+* **Few component variants.**
+* **Generous spacing despite compact controls.**
+* **Minimal borders and restrained elevation.**
+* **Information hierarchy comes from size, weight, spacing, and position rather than color.**
 
-### Neutrals
-- **Ink** (`{colors.ink}` — #201A15): primary text.
-- **Ink Secondary** (`{colors.ink-secondary}` — #6B6259): secondary text, `REQUESTED` state, helper copy.
-- **Muted** (`{colors.muted}` — #A79E93): placeholders, input borders, empty seat-meter dots.
-- **Surface** (`{colors.surface}` — #FFFDFA): the app canvas — warm, not stark white.
-- **Surface Subtle** (`{colors.surface-subtle}` — #F7F3EC): card fills, table hairlines, skeleton loaders.
-- **Surface Dark** (`{colors.surface-dark}` — #171310): reserved for a future dark/night driver mode — see §9.
+---
 
-No dark theme is built yet; `{colors.surface-dark}` exists as a placeholder token only.
+# 1. Colors
 
-## 2. Typography
+The palette is deliberately narrow.
 
-Two families. Space Grotesk is used sparingly — display headings and money — precisely because its geometric, slightly mechanical character shouldn't carry a full paragraph.
+Unlike the previous system, there is **no marigold, teal, amber, or other brand accent**.
 
-### Font Family
-- **Space Grotesk** — display headings (`display-hero`, `display-md`, `title-lg`) and every fare number. A geometric grotesk with just enough personality to read as "electric" without becoming a gimmick.
-- **Manrope** — everything else: body copy, buttons, labels, table cells, captions. Rounded terminals stay legible at 12px on a budget phone screen, which is the actual constraint this app is designed against.
+The visual hierarchy is driven primarily by black and neutral tones.
 
-### Hierarchy
+## Brand Palette
 
-| Token | Size | Weight | Use |
-|---|---|---|---|
-| `{typography.display-hero}` | 48px | 700 | Login/landing headline only |
-| `{typography.display-md}` | 34px | 700 | Page titles ("My Rides", "Driver Console") |
-| `{typography.title-lg}` | 24px | 600 | Card titles, pool summary headers |
-| `{typography.title-md}` | 20px | 700 | Modal titles, roster header |
-| `{typography.title-sm}` | 16px | 700 | List item titles, form section labels |
-| `{typography.body}` | 16px | 400 | Body copy |
-| `{typography.body-medium}` | 16px | 500 | Emphasized body |
-| `{typography.body-strong}` | 16px | 700 | Bold inline text |
-| `{typography.body-sm}` | 14px | 500 | Button labels, compact UI |
-| `{typography.body-sm-regular}` | 14px | 400 | Small regular text |
-| `{typography.caption}` | 12px | 600 | Status badges, timestamps, helper text |
-| `{typography.fare-display}` | 28px | 700 | The primary fare number on a ride card |
-| `{typography.fare-display-sm}` | 16px | 700 | Inline fare mentions, roster rows |
+### Black
+
+`{colors.black}` — `#000000`
+
+The primary action and strongest visual element.
+
+Used for:
+
+* Primary buttons
+* Active navigation
+* Selected controls
+* Important icons
+* Primary interactive elements
+* Seat-meter filled states
+* Strong headings when appropriate
+
+Black should not be used as a decorative background unnecessarily.
+
+### Soft Black
+
+`{colors.black-soft}` — `#171717`
+
+Used for:
+
+* Primary text
+* Large headings
+* High-emphasis labels
+* Fare values
+
+Using soft black for text rather than pure black reduces visual harshness.
+
+### White
+
+`{colors.white}` — `#FFFFFF`
+
+Used as the primary application surface.
+
+---
+
+## Semantic Colors
+
+Color is reserved for **meaning**, not branding.
+
+### Success
+
+* `success` — `#16803C`
+* `success-surface` — `#EAF6EE`
+
+Used for:
+
+* Completed operations
+* Successful confirmations
+* Online state when necessary
+* Positive system feedback
+
+### Warning
+
+* `warning` — `#B77900`
+* `warning-surface` — `#FFF5DB`
+
+Used for:
+
+* Driver arriving
+* Attention-required states
+* Important but non-error conditions
+
+### Error
+
+* `error` — `#D92D20`
+* `error-surface` — `#FDECEA`
+
+Used for:
+
+* Cancelled rides
+* Validation errors
+* Failed operations
+* Full pools
+* Destructive warnings
+
+### Information
+
+* `info` — `#276EF1`
+* `info-surface` — `#EDF3FF`
+
+Used sparingly for:
+
+* Informational system messages
+* Neutral system notifications
+* Non-critical guidance
+
+Semantic colors must never become decorative accents.
+
+---
+
+## Neutrals
+
+| Token            | Value     | Purpose                   |
+| ---------------- | --------- | ------------------------- |
+| `ink`            | `#171717` | Primary text              |
+| `ink-secondary`  | `#6B6B6B` | Secondary text            |
+| `muted`          | `#A3A3A3` | Placeholder/disabled text |
+| `surface`        | `#FFFFFF` | Main application surface  |
+| `surface-subtle` | `#F6F6F6` | Secondary surfaces        |
+| `surface-muted`  | `#EEEEEE` | Disabled/empty controls   |
+| `border`         | `#E5E5E5` | Default borders           |
+| `border-strong`  | `#D1D1D1` | Input/control borders     |
+
+The neutral palette should do most of the visual work.
+
+---
+
+# 2. Typography
+
+## Font Family
+
+**Manrope is the only typeface in the product.**
+
+There is no secondary display font.
+
+Manrope is used for:
+
+* Headings
+* Body text
+* Buttons
+* Fare values
+* Navigation
+* Tables
+* Labels
+* Status badges
+* Forms
+* Numbers
+
+This makes the interface more coherent and removes unnecessary typographic contrast.
+
+---
+
+## Hierarchy
+
+| Token             | Size | Weight | Use                       |
+| ----------------- | ---: | -----: | ------------------------- |
+| `display-hero`    | 44px |    700 | Login/landing headline    |
+| `display-md`      | 32px |    700 | Page titles               |
+| `title-lg`        | 24px |    700 | Major section/card titles |
+| `title-md`        | 20px |    700 | Modal/pool titles         |
+| `title-sm`        | 16px |    700 | List/form headings        |
+| `body`            | 16px |    400 | Standard content          |
+| `body-medium`     | 16px |    500 | Emphasized content        |
+| `body-strong`     | 16px |    700 | Strong inline content     |
+| `body-sm`         | 14px |    600 | Buttons and compact UI    |
+| `body-sm-regular` | 14px |    400 | Secondary information     |
+| `caption`         | 12px |    600 | Metadata/status           |
+| `fare-display`    | 28px |    700 | Main fare                 |
+| `fare-display-sm` | 16px |    700 | Compact fare              |
 
 ### Principles
-- **Fare and seat numbers always render with `tabular-nums`** so figures don't jitter as a fare recalculates on join/cancel (`Architecture.md` §10.2) — a real, not cosmetic, requirement.
-- **Space Grotesk stays out of body copy entirely.** If a screen needs more than a title and a number in Space Grotesk, that's a sign the layout needs a Manrope subhead instead of a bigger display size.
-- **No all-caps labels, no letter-spaced eyebrows.** Status is carried by the badge's color and a normal-case word ("Matched", not "MATCHED" or "STATUS: MATCHED").
 
-## 3. Layout
+**No all-caps UI.**
 
-### Spacing
-Base-4 scale: `{spacing.xs}` (4px) through `{spacing.4xl}` (64px). `{spacing.lg}` (16px) is the workhorse — card padding, list-row padding, form-field gaps.
+Use:
 
-### Screen Composition
-This app has no marketing grid to speak of; the actual screens (`Architecture.md` §14.1) are:
+> Matched
 
-```text
-Passenger dashboard          Ride detail                 Driver console
-┌─────────────────┐         ┌─────────────────┐         ┌───────────────────────┐
-│ New ride form    │         │ Status badge     │         │ Online/offline toggle │
-│  ZoneSelect ×2    │         │ Fare display     │         │ Seat meter            │
-│  Seats stepper    │         │ Pool summary      │         ├───────────┬───────────┤
-│  Fare estimate     │         │ Cancel (if legal) │         │  Roster    │  Actions  │
-├─────────────────┤         └─────────────────┘         │  table     │ (Arrive/  │
-│ My rides (list)   │         mobile: single column,      │            │  Start/…) │
-│  RideCard × n      │         status badge pinned top     └───────────┴───────────┘
-└─────────────────┘                                       desktop only — mobile
-mobile: single col.                                        stacks roster as cards
+instead of:
+
+> MATCHED
+
+Avoid unnecessary letter spacing.
+
+Fare and seat numbers use:
+
+```css
+font-variant-numeric: tabular-nums;
 ```
 
-Passenger screens are **single column at every breakpoint** — a ride request is inherently sequential (pickup → destination → seats → fare), and a list of rides is inherently a list. The one deliberate two-column layout is the driver's roster + seat meter, and only ≥1024px; a roster table forced into a phone width becomes unreadable, so it collapses to stacked passenger cards instead of a horizontally-scrolling table (see §8).
+Numbers should remain visually stable when values change.
 
-### Alignment
-Left-aligned throughout — this is a form- and list-heavy product, and centered body text or centered form fields slow down scanning. The fare number is the one right-aligned element, mirroring how a receipt reads.
+---
 
-## 4. Elevation & Depth
+# 3. Layout
 
-| Level | Treatment | Use |
-|---|---|---|
-| Flat | `{colors.surface-subtle}` fill, no shadow | List rows, roster table rows, skeleton loaders |
-| Hairline | 1px `{colors.surface-subtle}` border | Row/section dividers, navbar bottom edge |
-| Card shadow | `{components.card}` — two soft low-alpha layers | `RideCard`, `PoolCard` shown as standalone cards |
-| Elevated shadow | `{components.card-elevated}` | Modals, and the sticky "Request ride" / lifecycle-action bar pinned to the bottom of mobile screens |
+## Spacing
 
-Shadow is spent in exactly two places on purpose: a card that's grouped content, and the one floating action bar that has to visually separate itself from a scrolling list beneath it. Nothing else lifts off the page.
+The system retains a 4px base scale:
 
-## 5. Shapes
+```text
+4
+8
+12
+16
+24
+32
+48
+64
+```
 
-| Token | Value | Use |
-|---|---|---|
-| `{rounded.sm}` | 6px | Seat-meter dots, skeleton blocks |
-| `{rounded.md}` | 10px | Buttons, inputs — the default |
-| `{rounded.lg}` | 16px | Cards |
-| `{rounded.pill}` | 9999px | Status badges, chips, the online/offline toggle |
+`16px` remains the primary spacing unit.
 
-Rounding is friendly and consistent — slightly softer than a typical enterprise dashboard, because this is a consumer app used on the street, not in an office.
+However, controls are compact while **sections remain spacious**.
 
-## 6. Components
+For example:
 
-### Buttons
-- **`button-primary`** — marigold fill, dark `on-primary` text, `{rounded.md}`. Exactly one per screen at a time: "Request ride", "Accept", "Start trip". Never used for a status or a neutral acknowledgment.
-- **`button-secondary`** — white fill, ink border. Secondary actions: "Cancel", "Decline".
-- **`button-ghost`** — no fill, `ink-secondary` text. Tertiary/low-emphasis actions inside a card, e.g. "View details".
+```text
+Form section
+    ↓ 24px
+Field
+    ↓ 12px
+Field
+    ↓ 24px
+Next section
+```
 
-### Status Badge
-A single component, six color variants (§1). Always a normal-case word in a pill, never an icon alone — color plus text, because color-only fails for anyone colorblind reading a fare screen in bright sun.
+The goal is not to make every element large.
 
-### Seat Meter
-Filled dots (`{colors.primary}`) for occupied seats, empty outlined dots (`{colors.surface-subtle}` fill, `{colors.muted}` border) for open ones — e.g. ● ● ○ for 2/3 occupied. This is a direct, literal rendering of `occupiedSeats` vs `capacity`; it must never show a number the underlying data doesn't have, and it updates the moment the pool does.
+The goal is to keep **related elements compact and unrelated sections clearly separated**.
 
-### Fare Display
-The fare number in `{typography.fare-display}`, tabular-nums, right-aligned, with "BDT" in `{typography.body-sm-regular}` beside it — never inline with other body text, since it's the number a passenger scans for first.
+---
 
-### Cards
-- **`card`** — `RideCard` and `PoolCard`. Status badge top-left, fare top-right, route (pickup → destination) as the title, seat meter and driver info below.
-- **`card-elevated`** — modals and the sticky bottom action bar only.
+## Screen Composition
 
-### Forms
-- **`input` / `ZoneSelect`** — shared visual treatment: `{colors.muted}` border, `{rounded.md}`. `ZoneSelect` additionally shows only *served* routes (`PRD.md` §12) — an unsupported pair should never even appear as an option, rather than being offered and then rejected.
-- **`chip`** — payment method (`Cash` / `TeslaPay`) and zone tags.
+### Passenger Dashboard
+
+```text
+┌──────────────────────────────┐
+│ Navigation                   │
+├──────────────────────────────┤
+│                              │
+│ My rides                     │
+│                              │
+│ ┌──────────────────────────┐ │
+│ │ Matched             ৳120 │ │
+│ │ Banani → Gulshan         │ │
+│ │ ● ● ○                    │ │
+│ └──────────────────────────┘ │
+│                              │
+│ ┌──────────────────────────┐ │
+│ │ Completed           ৳90  │ │
+│ │ Dhanmondi → Farmgate     │ │
+│ └──────────────────────────┘ │
+│                              │
+│        + Request ride        │
+│                              │
+└──────────────────────────────┘
+```
+
+### Ride Detail
+
+```text
+┌──────────────────────────────┐
+│ ← Ride                       │
+│                              │
+│ Matched                      │
+│                              │
+│ Banani Road 11               │
+│          ↓                   │
+│ Gulshan 1                    │
+│                              │
+│ ──────────────────────────── │
+│                              │
+│ Fare                    ৳120 │
+│                              │
+│ Seats                   ●●○  │
+│                              │
+│ Driver                       │
+│ Bullet • Dhaka Tesla        │
+│                              │
+│                              │
+│       Cancel ride            │
+└──────────────────────────────┘
+```
 
 ### Driver Console
-- **`toggle-online`** — green when online, muted grey when offline; this is the one true on/off switch in the product and should look unmistakably different from a status badge.
-- **`table-row`** — roster rows: passenger name, pickup, destination, seats, fare (driver-only — never rendered for a passenger view, per `PRD.md` §11).
 
-### System States
-- **`skeleton`** — flat `{colors.surface-subtle}` blocks matching the shape of the content loading in; no shimmer animation by default.
-- **Empty state** — plain sentence in `{colors.ink-secondary}` plus one action, e.g. "No rides yet — request your first one." Written as an invitation, not an apology.
-- **Error state** — `{colors.accent-red}` text, states what happened and what to do next, never "Something went wrong."
+Desktop:
 
-## 7. Do's and Don'ts
+```text
+┌──────────────────────────────────────────────┐
+│ Driver Console                    Online ●   │
+├──────────────────────────────────────────────┤
+│                                              │
+│ ┌────────────────────┐ ┌───────────────────┐ │
+│ │ Pool               │ │ Actions           │ │
+│ │                    │ │                   │ │
+│ │ ● ● ○              │ │ Arrive            │ │
+│ │ 2 / 3 seats        │ │ Start trip        │ │
+│ │                    │ │ Complete          │ │
+│ └────────────────────┘ └───────────────────┘ │
+│                                              │
+│ Passengers                                   │
+│ ──────────────────────────────────────────── │
+│ Nusrat   Mohakhali → Gulshan     1 seat     │
+│ Rafiq    Banani → Gulshan         1 seat     │
+│                                              │
+└──────────────────────────────────────────────┘
+```
 
-### Do
-- Reserve `{colors.primary}` strictly for actions — never for a status badge, even though `DRIVER_ARRIVED`'s amber sits close to it on the wheel. Two adjacent-but-distinct hues keep "do this" and "this is happening" from blurring together.
-- Keep every ride-state color fixed and exclusive to that state (§1) — a badge's color alone should be enough to identify the state.
-- Use tabular numerals on every fare and seat count so figures don't visually jump on recalculation.
-- Keep passenger screens single-column; reserve two-column layout for the driver roster view on desktop only.
-- Write empty and error states as plain, active-voice sentences with a next step, not a mood or an apology.
+Mobile stacks the same information vertically.
 
-### Don't
-- Don't use accent colors as decoration — no gradient washes, no colored illustration filling empty space.
-- Don't render the seat meter or a fare number from anything but the live `occupiedSeats`/`fare_paisa` values — it's data, not an aesthetic bar.
-- Don't add a third typeface, and don't let Space Grotesk carry paragraph copy.
-- Don't stack more than one elevated shadow (`card-elevated`) on a screen at once — modal *or* sticky action bar, not both.
-- Don't design a horizontally-scrolling table for mobile roster views — collapse to stacked cards instead (§8).
+---
 
-## 8. Responsive Behavior
+## Alignment
 
-Breakpoints: mobile `<640px`, tablet `640–1024px`, desktop `>1024px`.
+Default alignment is left.
 
-Passenger flows (request form, ride list, ride detail) are single-column at every breakpoint — the content is inherently sequential or list-shaped, so extra width just becomes margin, not a second column. The driver's pool view is the one screen that changes shape: below 1024px, each roster row becomes its own stacked card (name, pickup→destination, seats, fare, status); at 1024px and above, those same rows collapse into `{components.table-row}` inside a single roster table beside the seat meter and lifecycle actions.
+Avoid centered layouts for functional content.
 
-The bottom sticky action bar (`card-elevated`) is mobile-only; on desktop the same action renders as a normal `button-primary` inline in the card, since there's no need to pin an action to the viewport edge on a large screen.
+The main exception is:
 
-## 9. Open Decisions
+* Empty states
+* Authentication screens
+* Small confirmation messages
 
-Unlike a template extracted from a live site, this system was originated for a product that doesn't exist yet, so some axes are deliberately left open rather than guessed:
+Fare values are right-aligned where they appear beside other ride information.
 
-- **Dark / night mode.** `{colors.surface-dark}` is reserved but unbuilt. Drivers working evenings are the most likely beneficiary — worth prototyping before committing to a full dark token set.
-- **Bangla-script support.** Space Grotesk and Manrope are Latin-only. If any UI copy needs to render in Bangla, a compatible pairing (e.g. a Bangla-supporting grotesk for body text) needs to be chosen before that work starts — this system doesn't yet answer that question.
-- **Motion.** No transition/animation direction has been set. Recommend one deliberate moment (e.g. the seat meter filling in when a passenger joins a pool) rather than default hover/fade transitions everywhere.
-- **Iconography.** No icon set has been chosen yet; components above are described by color/shape/text only.
+---
 
-## 10. Iteration Guide
+# 4. Elevation & Depth
 
-1. **New ride states don't exist** — the lifecycle in `PRD.md` §6 is fixed (`REQUESTED` → `CANCELLED`). If that ever changes, add the new state's color pair here before writing any component code against it.
-2. **Change the brand accent once, at `{colors.primary}`.** Every button, link, and focus ring derives from it; don't hardcode the hex anywhere else.
-3. **New type roles slot into the existing ladder** between `{typography.display-hero}` and `{typography.caption}` — match the family-per-role rule (Space Grotesk for display/money, Manrope for everything else).
-4. **New components describe their state pairing explicitly**, the way `status-badge` does, rather than inventing a one-off color.
-5. **Unbreakable boundaries:** one brand accent reserved for actions, six fixed ride-state colors used nowhere else, two typefaces, friendly rounding, shadow in exactly two places. Breaking any of these breaks the "readable at a glance, in bright sun, on a cheap phone" goal this whole system exists to serve.
+The system is intentionally flatter than the previous version.
+
+### Flat
+
+Used for:
+
+* Main page
+* Lists
+* Sections
+* Table rows
+
+### Border
+
+A `1px` neutral border is the default grouping mechanism.
+
+### Card
+
+Cards use a subtle border first.
+
+Shadow is optional and extremely restrained.
+
+```text
+border: 1px solid #E5E5E5
+```
+
+### Elevated
+
+Only use a shadow when an element must visually float above other content:
+
+* Mobile action bar
+* Modal/dialog
+
+Avoid decorative shadows.
+
+---
+
+# 5. Shapes
+
+| Token  |  Value | Use                  |
+| ------ | -----: | -------------------- |
+| `sm`   |    6px | Small indicators     |
+| `md`   |    8px | Buttons, inputs      |
+| `lg`   |   12px | Cards                |
+| `pill` | 9999px | Status/chips/toggles |
+
+The system is slightly less rounded than the previous version.
+
+Avoid excessive "rounded SaaS" styling.
+
+---
+
+# 6. Components
+
+## Buttons
+
+Buttons are intentionally shorter than the previous design.
+
+### Primary
+
+```text
+Height: 40px
+Padding: 8px 16px
+Radius: 8px
+Background: #000000
+Text: #FFFFFF
+```
+
+Examples:
+
+* Request ride
+* Accept
+* Start trip
+* Complete trip
+
+### Secondary
+
+```text
+Height: 40px
+Padding: 8px 16px
+Radius: 8px
+Background: #FFFFFF
+Border: #D1D1D1
+Text: #171717
+```
+
+Examples:
+
+* Cancel
+* Decline
+* Back
+
+### Ghost
+
+```text
+Height: 36px
+Padding: 6px 10px
+Background: transparent
+Text: #6B6B6B
+```
+
+Use only for low-priority actions.
+
+### Button rule
+
+A screen should normally have **one visually dominant black action**.
+
+Do not create multiple competing black buttons.
+
+---
+
+## Status Badge
+
+Status badges communicate state, not branding.
+
+| State          | Treatment    |
+| -------------- | ------------ |
+| Requested      | Neutral gray |
+| Matched        | Blue/info    |
+| Driver Arrived | Warning      |
+| Started        | Success      |
+| Completed      | Neutral gray |
+| Cancelled      | Error        |
+
+The badge always contains text.
+
+Never rely exclusively on color.
+
+Example:
+
+```text
+Matched
+Driver arrived
+In progress
+Completed
+Cancelled
+```
+
+---
+
+## Seat Meter
+
+Keep the literal representation:
+
+```text
+● ● ○
+```
+
+Filled:
+
+```text
+#000000
+```
+
+Empty:
+
+```text
+#EEEEEE
+```
+
+Border:
+
+```text
+#D1D1D1
+```
+
+The seat meter represents actual capacity data.
+
+It is not a decorative progress bar.
+
+---
+
+## Fare Display
+
+Fare is one of the strongest pieces of information on a ride card.
+
+```text
+৳120
+```
+
+Use:
+
+* Manrope
+* 28px
+* 700 weight
+* Tabular numerals
+
+Avoid adding a colored background to the fare.
+
+The number itself provides the emphasis.
+
+---
+
+## Cards
+
+Cards should be visually quiet.
+
+```text
+background: #FFFFFF
+border: 1px solid #E5E5E5
+border-radius: 12px
+padding: 16px
+```
+
+A typical ride card:
+
+```text
+Matched                         ৳120
+
+Banani Road 11
+        ↓
+Gulshan 1
+
+● ● ○     2 seats
+Bullet • Driver
+```
+
+Avoid:
+
+* Colored card backgrounds
+* Large shadows
+* Gradient cards
+* Excessive icons
+* Decorative illustrations
+
+---
+
+## Forms
+
+Inputs:
+
+```text
+height: 42px
+padding: 8px 12px
+border: 1px solid #D1D1D1
+border-radius: 8px
+background: #FFFFFF
+```
+
+Focused input:
+
+```text
+border: 1px solid #000000
+```
+
+Do not introduce a colorful focus border.
+
+Forms should have breathing space through **vertical section spacing**, not oversized controls.
+
+---
+
+## Driver Console
+
+The driver console should prioritize immediate recognition.
+
+Hierarchy:
+
+```text
+Online/offline
+    ↓
+Pool capacity
+    ↓
+Current passengers
+    ↓
+Lifecycle action
+```
+
+The lifecycle action is the dominant control.
+
+Do not visually compete with it using decorative cards or multiple accent colors.
+
+---
+
+## System States
+
+### Loading
+
+Use neutral skeletons:
+
+```text
+#F6F6F6
+```
+
+No shimmer by default.
+
+### Empty
+
+```text
+No rides yet
+
+Request your first ride.
+```
+
+Keep it short.
+
+### Error
+
+Use the error semantic color only for the error itself.
+
+```text
+Ride request failed
+
+The selected route is currently unavailable.
+```
+
+Do not use:
+
+> Something went wrong.
+
+---
+
+# 7. Do's and Don'ts
+
+## Do
+
+* Use Manrope everywhere.
+* Use black as the primary interactive color.
+* Keep the background white.
+* Use neutral gray for hierarchy and structure.
+* Use semantic colors only when they communicate actual state.
+* Keep buttons around 40px high.
+* Give sections 24–32px of breathing room.
+* Use borders before shadows.
+* Keep cards visually quiet.
+* Use tabular numerals for fares and seat counts.
+* Maintain a strong information hierarchy through typography and spacing.
+
+## Don't
+
+* Don't use marigold, teal, purple, or another brand accent.
+* Don't introduce gradients.
+* Don't use multiple colorful cards.
+* Don't use large rounded containers everywhere.
+* Don't make every control 48–56px tall.
+* Don't compensate for compact controls by reducing section spacing.
+* Don't use shadows as decoration.
+* Don't use icons as the only indicator of state.
+* Don't use multiple competing primary buttons.
+* Don't introduce another font.
+* Don't make the interface visually resemble a generic colorful SaaS dashboard.
+
+---
+
+# 8. Responsive Behavior
+
+Breakpoints:
+
+```text
+mobile: <640px
+tablet: 640–1024px
+desktop: >1024px
+```
+
+Passenger interfaces remain single-column.
+
+The driver's desktop console can use two columns:
+
+```text
+Roster | Pool + Actions
+```
+
+At mobile widths:
+
+```text
+Pool
+↓
+Passengers
+↓
+Actions
+```
+
+No horizontal scrolling.
+
+### Mobile action bar
+
+The lifecycle action can become a sticky bottom action bar on mobile.
+
+It should have:
+
+* White background
+* Thin top border
+* Subtle shadow
+* 16px horizontal padding
+* One primary black button
+
+The action bar should not become visually heavy.
+
+---
+
+# 9. Open Decisions
+
+The following are intentionally excluded from the current system:
+
+### Dark mode
+
+Not supported.
+
+The product is **light mode only**.
+
+Do not introduce dark-mode tokens until there is a concrete product requirement.
+
+### Bangla
+
+Bangla support should use a compatible Manrope-adjacent fallback when required. The interface should preserve the same typographic hierarchy rather than introducing a visually unrelated typeface.
+
+### Motion
+
+Motion should be restrained.
+
+Use transitions for:
+
+* Button state changes
+* Navigation
+* Seat-meter updates
+* Ride-state transitions
+
+Avoid:
+
+* Decorative animations
+* Continuous motion
+* Excessive page transitions
+* Shimmer by default
+
+### Iconography
+
+Use a simple, consistent line-icon system.
+
+Icons should support comprehension rather than become decorative UI elements.
+
+---
+
+# 10. Iteration Guide
+
+1. **Black is the brand/action color.** New primary actions derive from `{colors.black}`.
+2. **Keep the palette monochrome.** Add semantic colors only when the interface needs to communicate state.
+3. **Manrope is the only typeface.** Do not introduce a display font.
+4. **Use spacing for hierarchy.** Do not make components larger simply to create visual separation.
+5. **Prefer borders over shadows.**
+6. **Keep controls compact but comfortable.**
+7. **Use semantic color only for semantic information.**
+8. **Keep cards quiet.** Content should provide the visual hierarchy.
+9. **Maintain generous section spacing even when individual controls are compact.**
+10. **Do not add visual complexity unless it improves comprehension or interaction.**
+
+## Unbreakable boundaries
+
+```text
+ONE FONT
+Manrope
+
+ONE PRIMARY ACTION COLOR
+Black
+
+ONE BASE SURFACE
+White
+
+NEUTRAL STRUCTURE
+Gray borders + surfaces
+
+SEMANTIC COLOR
+Only for actual system states
+
+LIGHT MODE
+No dark theme
+
+MINIMAL ELEVATION
+Borders first, shadows only when necessary
+
+COMPACT CONTROLS
+~40–42px
+
+GENEROUS LAYOUT
+16–32px spacing between meaningful groups
+```
+
+The resulting visual language is significantly closer to **Uber's functional, monochrome product UI philosophy** than the original Dhaka-themed palette: the Dhaka identity comes from the product, routes, terminology, and interaction design rather than from colorful UI decoration.

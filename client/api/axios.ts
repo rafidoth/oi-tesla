@@ -52,5 +52,13 @@ apiClient.interceptors.response.use(
   }
 );
 
-export const baseUrlWrapper = (relativeUrl: string) : string => `${process.env.NEXT_PUBLIC_API_URL}${relativeUrl}`
+export const baseUrlWrapper = (relativeUrl: string): string => {
+  const baseURL = process.env.NEXT_PUBLIC_API_URL;
+  if (!baseURL) {
+    throw new Error("Base Server Url environment variable is missing.");
+  }
+  return `${baseURL}${relativeUrl}`
+}
+
+
 export default apiClient;

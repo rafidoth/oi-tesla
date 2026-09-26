@@ -21,7 +21,7 @@ function Card({
         "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[var(--radius-lg)] bg-card p-(--card-spacing) text-sm text-card-foreground border border-border [--card-spacing:--spacing(4)] data-[size=sm]:[--card-spacing:--spacing(3)]",
         variant === "elevated"
           ? "shadow-[var(--shadow-card-elevated)]"
-          : "shadow-[var(--shadow-card)]",
+          : "shadow-none",
         className
       )}
       {...props}
@@ -47,7 +47,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-lg font-semibold leading-tight text-ink",
+        "text-lg font-bold leading-tight text-ink",
         className
       )}
       {...props}

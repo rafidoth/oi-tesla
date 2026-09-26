@@ -24,23 +24,23 @@ const statusConfig: Record<
   },
   MATCHED: {
     defaultLabel: "Matched",
-    className: "bg-teal-surface text-teal-strong",
+    className: "bg-info-surface text-info",
   },
   DRIVER_ARRIVED: {
     defaultLabel: "Driver Arrived",
-    className: "bg-accent-amber-surface text-ink font-semibold",
+    className: "bg-warning-surface text-warning",
   },
   STARTED: {
     defaultLabel: "In Motion",
-    className: "bg-accent-green-surface text-accent-green",
+    className: "bg-success-surface text-success",
   },
   COMPLETED: {
     defaultLabel: "Completed",
-    className: "bg-accent-slate-surface text-accent-slate",
+    className: "bg-surface-subtle text-ink-secondary",
   },
   CANCELLED: {
     defaultLabel: "Cancelled",
-    className: "bg-accent-red-surface text-accent-red",
+    className: "bg-error-surface text-error",
   },
 }
 

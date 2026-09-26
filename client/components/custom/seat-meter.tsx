@@ -40,15 +40,15 @@ export function SeatMeter({
                 "rounded-[var(--radius-sm)] transition-colors",
                 size === "sm" ? "size-2" : "size-2.5",
                 isOccupied
-                  ? "bg-primary border border-primary"
-                  : "bg-surface-subtle border border-input"
+                  ? "bg-black border border-black"
+                  : "bg-surface-muted border border-border-strong"
               )}
             />
           )
         })}
       </div>
       {showCount && (
-        <span className="font-mono text-xs tabular-nums text-ink-secondary ml-1">
+        <span className="text-xs tabular-nums text-ink-secondary ml-1 font-medium">
           {safeOccupied}/{safeCapacity}
         </span>
       )}

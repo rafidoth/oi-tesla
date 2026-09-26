@@ -64,17 +64,17 @@ export default function Home() {
         <div className="w-full max-w-3xl flex flex-col gap-8">
           {/* Hero Section */}
           <header className="flex flex-col gap-4 text-center items-center py-6 sm:py-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-surface text-primary border border-primary/20 text-xs font-semibold">
-              <Zap className="size-3.5 fill-primary" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-subtle text-ink-secondary border border-border text-xs font-semibold">
+              <Zap className="size-3.5 text-ink fill-black" />
               <span>Dhaka Electric Three-Wheeler Pooling</span>
             </div>
 
-            <h1 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight text-ink max-w-xl">
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-ink max-w-xl">
               Shared rides for Dhaka&apos;s battery Teslas.
             </h1>
 
             <p className="text-ink-secondary text-base sm:text-lg max-w-lg leading-relaxed">
-              Street-smart pooled commuting along fixed corridors with fair distance-split pricing and capacity guarantees.
+              Street-smart pooled commuting along fixed routes with fair distance-split pricing and capacity guarantees.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -82,7 +82,7 @@ export default function Home() {
                 href="/login"
                 className={buttonVariants({
                   size: "lg",
-                  className: "font-medium gap-2",
+                  className: "font-semibold gap-2",
                 })}
               >
                 <span>Sign In</span>
@@ -93,7 +93,7 @@ export default function Home() {
                 className={buttonVariants({
                   variant: "secondary",
                   size: "lg",
-                  className: "font-medium",
+                  className: "font-semibold",
                 })}
               >
                 Create Account
@@ -102,11 +102,11 @@ export default function Home() {
           </header>
 
           {/* API Health Card */}
-          <Card className="shadow-card border-border/80">
+          <Card className="border-border">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Activity className="size-5 text-primary" />
+                  <Activity className="size-5 text-ink" />
                   <CardTitle>System & API Health</CardTitle>
                 </div>
                 {isLoading ? (
@@ -120,7 +120,7 @@ export default function Home() {
                 )}
               </div>
               <CardDescription>
-                Backend REST endpoint at <code className="font-mono text-xs">/api/health</code>
+                Backend REST endpoint at <code className="text-xs">/api/health</code>
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
@@ -130,11 +130,11 @@ export default function Home() {
                   <Skeleton className="h-4 w-3/4" />
                 </div>
               ) : isError ? (
-                <div className="p-3 rounded-[var(--radius-md)] bg-accent-red-surface text-accent-red text-sm border border-accent-red/20 font-medium">
-                  Backend service is currently unreachable at <code className="font-mono text-xs">/api/health</code>. Ensure the server is running on port 8080.
+                <div className="p-3 rounded-[var(--radius-md)] bg-error-surface text-error text-sm border border-error/20 font-medium">
+                  Backend service is currently unreachable at <code className="text-xs">/api/health</code>. Ensure the server is running on port 8080.
                 </div>
               ) : (
-                <div className="bg-surface-subtle p-4 rounded-[var(--radius-md)] text-sm flex flex-col gap-1 font-mono">
+                <div className="bg-surface-subtle p-4 rounded-[var(--radius-md)] text-sm flex flex-col gap-1">
                   <div>
                     <span className="text-ink-secondary">Message:</span>{" "}
                     <span className="text-ink font-medium">{health?.message}</span>
@@ -170,7 +170,7 @@ export default function Home() {
           </Card>
 
           {/* UI Design System Showcase */}
-          <Card className="shadow-card border-border/80">
+          <Card className="border-border">
             <CardHeader>
               <CardTitle>Design System Elements (UI_DESIGN.md)</CardTitle>
               <CardDescription>
@@ -204,9 +204,20 @@ export default function Home() {
 
                 <div className="flex flex-col gap-1.5 sm:items-end">
                   <span className="text-xs font-semibold text-ink-secondary">
-                    3. Fare Display (Tabular Numeral)
+                    3. Fare Display (Tabular Numeral & Dynamic Savings)
                   </span>
-                  <FareDisplay amount={120} align="right" />
+                  <div className="flex flex-col sm:items-end gap-2">
+                    <FareDisplay
+                      paisa={10714}
+                      originalPaisa={15000}
+                      align="right"
+                      animateChange
+                    />
+                    <div className="text-[11px] text-ink-secondary flex items-center gap-1.5">
+                      <span>Solo rate:</span>
+                      <FareDisplay amount={150} size="sm" align="right" />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -228,7 +239,7 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <Chip selected>Cash</Chip>
                     <Chip>TeslaPay</Chip>
-                    <Chip>Mirpur Corridor</Chip>
+                    <Chip>Mirpur Route</Chip>
                   </div>
                 </div>
               </div>
