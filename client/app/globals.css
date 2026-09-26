@@ -7,50 +7,50 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-subtle: var(--surface-subtle);
-  --color-surface-dark: var(--surface-dark);
 
-  /* Brand tokens */
-  --color-primary: var(--primary);
-  --color-primary-strong: var(--primary-strong);
-  --color-primary-surface: var(--primary-surface);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-on-primary: var(--on-primary);
-
-  /* Ride-state tokens */
-  --color-teal: var(--teal);
-  --color-teal-strong: var(--teal-strong);
-  --color-teal-surface: var(--teal-surface);
-  --color-accent-amber: var(--accent-amber);
-  --color-accent-amber-surface: var(--accent-amber-surface);
-  --color-accent-green: var(--accent-green);
-  --color-accent-green-surface: var(--accent-green-surface);
-  --color-accent-slate: var(--accent-slate);
-  --color-accent-slate-surface: var(--accent-slate-surface);
-  --color-accent-red: var(--accent-red);
-  --color-accent-red-surface: var(--accent-red-surface);
-
-  /* Neutrals & Inks */
+  /* Monochrome brand palette (UI_DESIGN.md §1) */
+  --color-black: var(--black);
+  --color-black-soft: var(--black-soft);
+  --color-white: var(--white);
   --color-ink: var(--ink);
   --color-ink-secondary: var(--ink-secondary);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
 
-  /* Semantic UI tokens */
+  /* Semantic state colors (UI_DESIGN.md §1) */
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-error: var(--error);
+  --color-error-surface: var(--error-surface);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+
+  /* Semantic UI tokens (Shadcn) */
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-surface: var(--primary-surface);
+  --color-on-primary: var(--on-primary);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   /* Sidebar */
   --color-sidebar: var(--sidebar);
@@ -62,139 +62,158 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Charts */
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+  /* Backward-compatible aliases for state tokens */
+  --color-teal: var(--info);
+  --color-teal-strong: var(--info);
+  --color-teal-surface: var(--info-surface);
+  --color-accent-amber: var(--warning);
+  --color-accent-amber-surface: var(--warning-surface);
+  --color-accent-green: var(--success);
+  --color-accent-green-surface: var(--success-surface);
+  --color-accent-slate: var(--ink-secondary);
+  --color-accent-slate-surface: var(--surface-muted);
+  --color-accent-red: var(--error);
+  --color-accent-red-surface: var(--error-surface);
 
-  /* Fonts */
+  /* Typography: Manrope is the only typeface across the entire product (UI_DESIGN.md §2) */
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
 
   /* Radius tokens per UI_DESIGN.md §5 */
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-pill: 9999px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-3xl: 28px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
   --radius-4xl: 9999px;
 
-  /* Shadows per UI_DESIGN.md §4 */
-  --shadow-card: 0 1px 2px 0 rgba(32, 26, 21, 0.03), 0 6px 16px 0 rgba(32, 26, 21, 0.04);
-  --shadow-card-elevated: 0 4px 10px 0 rgba(32, 26, 21, 0.05), 0 16px 40px 0 rgba(32, 26, 21, 0.08);
+  /* Elevation per UI_DESIGN.md §4 */
+  --shadow-card: none;
+  --shadow-card-elevated: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
 }
 
 :root {
-  /* Brand Tokens (UI_DESIGN.md §1) */
-  --primary: #FF8A1E;
-  --primary-strong: #E86F00;
-  --primary-surface: #FFF1DE;
-  --primary-foreground: #241A0E;
-  --on-primary: #241A0E;
+  /* Brand Palette (UI_DESIGN.md §1) */
+  --black: #000000;
+  --black-soft: #171717;
+  --white: #FFFFFF;
 
-  /* Ride-State Tokens (UI_DESIGN.md §1) */
-  --teal: #0EA5A0;
-  --teal-strong: #0B7F7B;
-  --teal-surface: #E3F7F6;
+  /* Neutrals & Text (UI_DESIGN.md §1) */
+  --ink: #171717;
+  --ink-secondary: #6B6B6B;
+  --muted: #A3A3A3;
+  --muted-foreground: #6B6B6B;
 
-  --accent-amber: #F2B705;
-  --accent-amber-surface: #FFF6D8;
+  /* Surfaces (UI_DESIGN.md §1) */
+  --surface: #FFFFFF;
+  --surface-subtle: #F6F6F6;
+  --surface-muted: #EEEEEE;
 
-  --accent-green: #1FAE55;
-  --accent-green-surface: #E1F7E9;
+  /* Borders (UI_DESIGN.md §1) */
+  --border: #E5E5E5;
+  --border-strong: #D1D1D1;
 
-  --accent-slate: #5B6570;
-  --accent-slate-surface: #E9ECEF;
+  /* Semantic Colors (UI_DESIGN.md §1) */
+  --success: #16803C;
+  --success-surface: #EAF6EE;
 
-  --accent-red: #E5484D;
-  --accent-red-surface: #FDE8E8;
+  --warning: #B77900;
+  --warning-surface: #FFF5DB;
 
-  /* Neutrals & Surfaces (UI_DESIGN.md §1) */
-  --ink: #201A15;
-  --ink-secondary: #6B6259;
-  --surface: #FFFDFA;
-  --surface-subtle: #F7F3EC;
-  --surface-dark: #171310;
+  --error: #D92D20;
+  --error-surface: #FDECEA;
 
-  /* Semantic Theme Mappings */
-  --background: #FFFDFA;
-  --foreground: #201A15;
-  --card: #FFFDFA;
-  --card-foreground: #201A15;
-  --popover: #FFFDFA;
-  --popover-foreground: #201A15;
-  --secondary: #F7F3EC;
-  --secondary-foreground: #201A15;
-  --muted: #F7F3EC;
-  --muted-foreground: #6B6259;
-  --accent: #FFF1DE;
-  --accent-foreground: #201A15;
-  --destructive: #E5484D;
-  --destructive-foreground: #FFFDFA;
-  --border: #F7F3EC;
-  --input: #A79E93;
-  --ring: #FF8A1E;
+  --info: #276EF1;
+  --info-surface: #EDF3FF;
 
-  /* Radius (UI_DESIGN.md §5) */
-  --radius: 10px;
+  /* Semantic UI Mappings (Shadcn defaults) */
+  --background: #FFFFFF;
+  --foreground: #171717;
+
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --primary-strong: #171717;
+  --primary-surface: #F6F6F6;
+  --on-primary: #FFFFFF;
+
+  --secondary: #FFFFFF;
+  --secondary-foreground: #171717;
+
+  --accent: #F6F6F6;
+  --accent-foreground: #171717;
+
+  --destructive: #D92D20;
+  --destructive-foreground: #FFFFFF;
+
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
+
+  --input: #D1D1D1;
+  --ring: #000000;
+
+  /* Base Radius */
+  --radius: 8px;
 
   /* Sidebar Tokens */
-  --sidebar: #FFFDFA;
-  --sidebar-foreground: #201A15;
-  --sidebar-primary: #FF8A1E;
-  --sidebar-primary-foreground: #241A0E;
-  --sidebar-accent: #FFF1DE;
-  --sidebar-accent-foreground: #201A15;
-  --sidebar-border: #F7F3EC;
-  --sidebar-ring: #FF8A1E;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F6F6F6;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #E5E5E5;
+  --sidebar-ring: #000000;
 
   /* Charts */
-  --chart-1: #FF8A1E;
-  --chart-2: #0EA5A0;
-  --chart-3: #F2B705;
-  --chart-4: #1FAE55;
-  --chart-5: #5B6570;
+  --chart-1: #000000;
+  --chart-2: #276EF1;
+  --chart-3: #B77900;
+  --chart-4: #16803C;
+  --chart-5: #6B6B6B;
 }
 
+/* Light mode only per UI_DESIGN.md §9 */
 .dark {
-  --background: #171310;
-  --foreground: #FFFDFA;
-  --surface: #171310;
-  --surface-subtle: #241E19;
-  --surface-dark: #171310;
-  --card: #1C1713;
-  --card-foreground: #FFFDFA;
-  --popover: #1C1713;
-  --popover-foreground: #FFFDFA;
-  --primary: #FF8A1E;
-  --primary-strong: #E86F00;
-  --primary-surface: #2E1F11;
-  --primary-foreground: #241A0E;
-  --on-primary: #241A0E;
-  --secondary: #241E19;
-  --secondary-foreground: #FFFDFA;
-  --muted: #241E19;
-  --muted-foreground: #A79E93;
-  --accent: #2E1F11;
-  --accent-foreground: #FFFDFA;
-  --destructive: #E5484D;
-  --destructive-foreground: #FFFDFA;
-  --border: #2C241E;
-  --input: #5B6570;
-  --ring: #FF8A1E;
-  --sidebar: #171310;
-  --sidebar-foreground: #FFFDFA;
-  --sidebar-primary: #FF8A1E;
-  --sidebar-primary-foreground: #241A0E;
-  --sidebar-accent: #2E1F11;
-  --sidebar-accent-foreground: #FFFDFA;
-  --sidebar-border: #2C241E;
-  --sidebar-ring: #FF8A1E;
+  --background: #FFFFFF;
+  --foreground: #171717;
+  --surface: #FFFFFF;
+  --surface-subtle: #F6F6F6;
+  --surface-muted: #EEEEEE;
+  --card: #FFFFFF;
+  --card-foreground: #171717;
+  --popover: #FFFFFF;
+  --popover-foreground: #171717;
+  --primary: #000000;
+  --primary-foreground: #FFFFFF;
+  --primary-strong: #171717;
+  --primary-surface: #F6F6F6;
+  --on-primary: #FFFFFF;
+  --secondary: #FFFFFF;
+  --secondary-foreground: #171717;
+  --muted: #A3A3A3;
+  --muted-foreground: #6B6B6B;
+  --accent: #F6F6F6;
+  --accent-foreground: #171717;
+  --destructive: #D92D20;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E5E5;
+  --border-strong: #D1D1D1;
+  --input: #D1D1D1;
+  --ring: #000000;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #171717;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F6F6F6;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #E5E5E5;
+  --sidebar-ring: #000000;
 }
 
 @layer base {
