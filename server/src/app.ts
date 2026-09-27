@@ -8,6 +8,7 @@ import { authRouter } from './modules/auth/auth.module.js';
 import { usersRouter } from './modules/users/users.module.js';
 import { locationsRouter } from './modules/locations/locations.module.js';
 import { ridesRouter } from './modules/rides/rides.module.js';
+import { driverRouter } from './modules/driver/driver.module.js';
 import errorHandler from './shared/middleware/errorHandler.js';
 
 const app: Express = express();
@@ -31,6 +32,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/locations', locationsRouter);
 app.use('/api/rides', ridesRouter);
+app.use('/api/driver', driverRouter);
 
 // Global Error Handler
 app.use(errorHandler);

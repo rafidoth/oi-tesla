@@ -2,7 +2,11 @@ export * from "./types/driver.types";
 export * from "./api/driver.api";
 export * from "./hooks/use-driver-me";
 export * from "./hooks/use-update-driver-status";
+export * from "./hooks/use-open-pools-query";
 export * from "./components/driver-dashboard-header";
 export * from "./components/driver-off-duty-banner";
+export * from "./components/open-pool-card";
+export * from "./components/open-pools-feed";
+
 
 

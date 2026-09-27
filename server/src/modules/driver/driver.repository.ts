@@ -1,7 +1,23 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
 import type { db } from '../../db/client.js';
-import { users, vehicles, pools, locations, type User, type Vehicle } from '../../db/schema/index.js';
-import type { DriverActivePool } from './driver.types.js';
+import {
+  users,
+  vehicles,
+  pools,
+  locations,
+  passengerRides,
+  rideRequests,
+  rideEvents,
+  type User,
+  type Vehicle,
+} from '../../db/schema/index.js';
+import type {
+  DriverActivePool,
+  OpenPoolItem,
+  OpenPoolMemberRequest,
+  OpenPoolDestinationStop,
+} from './driver.types.js';
+
 
 export class DriverRepository {
   constructor(private readonly dbClient: typeof db) {}
@@ -62,6 +78,144 @@ export class DriverRepository {
       .returning();
 
     return updatedVehicle ?? null;
+  }
+
+  async findOpenPoolsForDriver(driverId: string, vehicleCapacity: number): Promise<OpenPoolItem[]> {
+    const declinedPoolIds = await this.findDeclinedPoolIds(driverId);
+    const poolRows = await this.queryCompatibleOpenPools(vehicleCapacity, declinedPoolIds);
+
+    if (poolRows.length === 0) {
+      return [];
+    }
+
+    const poolIds = poolRows.map((pool) => pool.id);
+    const memberRows = await this.findActiveMembersForPools(poolIds);
+    const { membersByPoolId, stopsByPoolId } = this.buildPoolMembersMap(memberRows);
+
+    return poolRows.map((pool) => {
+      const memberRequests = membersByPoolId.get(pool.id) ?? [];
+      const stopMap = stopsByPoolId.get(pool.id) ?? new Map<number, string>();
+      const destinationStops: OpenPoolDestinationStop[] = Array.from(stopMap.entries()).map(
+        ([locationId, locationName]) => ({
+          locationId,
+          locationName,
+        })
+      );
+
+      return {
+        id: pool.id,
+        pickupLocationId: pool.pickupLocationId,
+        pickupLocationName: pool.pickupLocationName,
+        status: 'OPEN',
+        capacity: pool.capacity,
+        occupiedSeats: pool.occupiedSeats,
+        passengerCount: memberRequests.length,
+        destinationStops,
+        memberRequests,
+        createdAt: pool.createdAt,
+      };
+    });
+  }
+
+  private async findDeclinedPoolIds(driverId: string): Promise<string[]> {
+    const declinedRows = await this.dbClient
+      .select({ poolId: rideEvents.poolId })
+      .from(rideEvents)
+      .where(
+        and(
+          eq(rideEvents.actorId, driverId),
+          eq(rideEvents.event, 'DRIVER_DECLINED'),
+          isNotNull(rideEvents.poolId)
+        )
+      );
+
+    return declinedRows
+      .map((row) => row.poolId)
+      .filter((id): id is string => Boolean(id));
+  }
+
+  private async queryCompatibleOpenPools(
+    vehicleCapacity: number,
+    excludedPoolIds: string[]
+  ) {
+    const whereConditions = [
+      eq(pools.status, 'OPEN'),
+      isNull(pools.driverId),
+      lte(pools.occupiedSeats, vehicleCapacity),
+      gt(pools.occupiedSeats, 0),
+    ];
+
+    if (excludedPoolIds.length > 0) {
+      whereConditions.push(notInArray(pools.id, excludedPoolIds));
+    }
+
+    return this.dbClient
+      .select({
+        id: pools.id,
+        pickupLocationId: pools.pickupLocationId,
+        pickupLocationName: locations.name,
+        status: pools.status,
+        capacity: pools.capacity,
+        occupiedSeats: pools.occupiedSeats,
+        createdAt: pools.createdAt,
+      })
+      .from(pools)
+      .innerJoin(locations, eq(pools.pickupLocationId, locations.id))
+      .where(and(...whereConditions))
+      .orderBy(asc(pools.createdAt));
+  }
+
+  private async findActiveMembersForPools(poolIds: string[]) {
+    return this.dbClient
+      .select({
+        poolId: passengerRides.poolId,
+        passengerRideId: passengerRides.id,
+        seats: passengerRides.seats,
+        destLocationId: rideRequests.destLocationId,
+        destLocationName: locations.name,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .innerJoin(locations, eq(rideRequests.destLocationId, locations.id))
+      .where(
+        and(
+          inArray(passengerRides.poolId, poolIds),
+          isNull(passengerRides.cancelledAt)
+        )
+      );
+  }
+
+  private buildPoolMembersMap(
+    memberRows: Array<{
+      poolId: string;
+      passengerRideId: string;
+      destLocationId: number;
+      destLocationName: string;
+      seats: number;
+    }>
+  ) {
+    const membersByPoolId = new Map<string, OpenPoolMemberRequest[]>();
+    const stopsByPoolId = new Map<string, Map<number, string>>();
+
+    for (const member of memberRows) {
+      const list = membersByPoolId.get(member.poolId) ?? [];
+      list.push({
+        passengerRideId: member.passengerRideId,
+        destLocationId: member.destLocationId,
+        destLocationName: member.destLocationName,
+        seats: member.seats,
+      });
+      membersByPoolId.set(member.poolId, list);
+
+      let stopMap = stopsByPoolId.get(member.poolId);
+      if (!stopMap) {
+        stopMap = new Map<number, string>();
+        stopsByPoolId.set(member.poolId, stopMap);
+      }
+      stopMap.set(member.destLocationId, member.destLocationName);
+    }
+
+    return { membersByPoolId, stopsByPoolId };
   }
 }
 

@@ -3,6 +3,7 @@ import type {
   DriverMeResponse,
   UpdateDriverStatusInput,
   UpdateDriverStatusResponse,
+  OpenPoolItem,
 } from "../types/driver.types";
 
 export const driverApi = {
@@ -22,7 +23,15 @@ export const driverApi = {
     );
     return response.data;
   },
+
+  async getOpenPools(): Promise<OpenPoolItem[]> {
+    const response = await apiClient.get<OpenPoolItem[]>(
+      baseUrlWrapper("/driver/pools?status=OPEN")
+    );
+    return response.data;
+  },
 };
 
 export default driverApi;
+
 

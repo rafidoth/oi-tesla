@@ -10,6 +10,7 @@ describe('DriverController Unit Tests', () => {
   let mockDriverService: {
     getDriverMe: ReturnType<typeof vi.fn>;
     updateDriverStatus: ReturnType<typeof vi.fn>;
+    getOpenPoolsForDriver: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -19,6 +20,7 @@ describe('DriverController Unit Tests', () => {
     mockDriverService = {
       getDriverMe: vi.fn(),
       updateDriverStatus: vi.fn(),
+      getOpenPoolsForDriver: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -156,5 +158,78 @@ describe('DriverController Unit Tests', () => {
 
     expect(next).toHaveBeenCalledWith(error);
   });
+
+  it('successfully returns 200 with open pools for driver', async () => {
+    const mockPools = [
+      {
+        id: 'pool-1',
+        pickupLocationId: 1,
+        pickupLocationName: 'Gulshan-2',
+        status: 'OPEN' as const,
+        capacity: 3,
+        occupiedSeats: 1,
+        passengerCount: 1,
+        destinationStops: [{ locationId: 2, locationName: 'Banani' }],
+        memberRequests: [
+          { passengerRideId: 'ride-1', destLocationId: 2, destLocationName: 'Banani', seats: 1 },
+        ],
+        createdAt: new Date(),
+      },
+    ];
+    mockDriverService.getOpenPoolsForDriver.mockResolvedValue(mockPools);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      query: {
+        status: 'OPEN',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.getDriverPools(req, res as Response, next);
+
+    expect(mockDriverService.getOpenPoolsForDriver).toHaveBeenCalledWith(CAST.driver.id);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(mockPools);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('passes UnauthorizedError to next on getDriverPools if unauthenticated', async () => {
+    const req = {
+      query: {
+        status: 'OPEN',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.getDriverPools(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+  });
+
+  it('delegates service errors to next on getDriverPools', async () => {
+    const error = new Error('Service error');
+    mockDriverService.getOpenPoolsForDriver.mockRejectedValue(error);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      query: {
+        status: 'OPEN',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.getDriverPools(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
 });
+
 

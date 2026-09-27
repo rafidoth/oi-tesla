@@ -35,7 +35,28 @@ export class DriverController {
       next(err);
     }
   }
+
+  async getDriverPools(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = req.user?.sub || req.user?.id;
+      if (!driverId) {
+        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
+      }
+
+      const status = req.query.status as string | undefined;
+      if (!status || status === 'OPEN') {
+        const pools = await this.driverService.getOpenPoolsForDriver(driverId);
+        res.status(200).json(pools);
+        return;
+      }
+
+      res.status(200).json([]);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default DriverController;
+
 

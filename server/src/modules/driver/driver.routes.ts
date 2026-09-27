@@ -3,7 +3,7 @@ import { DriverController } from './driver.controller.js';
 import { authenticate } from '../../shared/middleware/authenticate.js';
 import { authorize } from '../../shared/middleware/authorize.js';
 import { validate } from '../../shared/middleware/validate.js';
-import { updateDriverStatusSchema } from './driver.schema.js';
+import { updateDriverStatusSchema, getDriverPoolsQuerySchema } from './driver.schema.js';
 
 export function createDriverRouter(controller: DriverController): Router {
   const router = Router();
@@ -18,6 +18,14 @@ export function createDriverRouter(controller: DriverController): Router {
     authorize('DRIVER'),
     validate(updateDriverStatusSchema, 'body'),
     (req, res, next) => controller.updateDriverStatus(req, res, next)
+  );
+
+  router.get(
+    '/pools',
+    authenticate,
+    authorize('DRIVER'),
+    validate(getDriverPoolsQuerySchema, 'query'),
+    (req, res, next) => controller.getDriverPools(req, res, next)
   );
 
   return router;

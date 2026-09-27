@@ -35,3 +35,29 @@ export interface UpdateDriverStatusResponse {
   vehicle: DriverVehicle;
 }
 
+export interface OpenPoolMemberRequest {
+  passengerRideId: string;
+  destLocationId: number;
+  destLocationName: string;
+  seats: number;
+}
+
+export interface OpenPoolDestinationStop {
+  locationId: number;
+  locationName: string;
+}
+
+export interface OpenPoolItem {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: 'OPEN';
+  capacity: number;
+  occupiedSeats: number;
+  passengerCount: number;
+  destinationStops: OpenPoolDestinationStop[];
+  memberRequests: OpenPoolMemberRequest[];
+  createdAt: Date;
+}
+
+

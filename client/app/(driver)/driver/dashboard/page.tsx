@@ -4,16 +4,34 @@ import * as React from "react";
 import {
   useDriverMeQuery,
   useUpdateDriverStatusMutation,
+  useOpenPoolsQuery,
   DriverDashboardHeader,
   DriverOffDutyBanner,
+  OpenPoolsFeed,
 } from "@/features/driver";
 
 export default function DriverDashboardPage() {
   const { data, isLoading, isError, error, refetch } = useDriverMeQuery();
+
+  const isOnline = data?.vehicle?.status === "ONLINE";
+  const hasActivePool = Boolean(data?.activePool);
+
+  const {
+    data: openPools,
+    isLoading: isOpenPoolsLoading,
+    isFetching: isOpenPoolsFetching,
+    isError: isOpenPoolsError,
+    error: openPoolsError,
+    refetch: refetchOpenPools,
+  } = useOpenPoolsQuery({
+    enabled: isOnline && !hasActivePool,
+  });
+
   const updateStatusMutation = useUpdateDriverStatusMutation({
     onSuccess: (response) => {
+      refetch();
       if (response.status === "ONLINE") {
-        refetch();
+        refetchOpenPools();
       }
     },
   });
@@ -42,7 +60,19 @@ export default function DriverDashboardPage() {
           isUpdating={updateStatusMutation.isPending}
         />
       )}
+
+      {isOnline && !hasActivePool && (
+        <OpenPoolsFeed
+          pools={openPools}
+          isLoading={isOpenPoolsLoading}
+          isFetching={isOpenPoolsFetching}
+          isError={isOpenPoolsError}
+          error={openPoolsError}
+          onRefresh={() => refetchOpenPools()}
+        />
+      )}
     </div>
   );
 }
+
 

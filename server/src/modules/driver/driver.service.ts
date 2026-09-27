@@ -1,6 +1,6 @@
 import { DriverRepository } from './driver.repository.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
-import type { DriverMeResponse, UpdateDriverStatusResponse } from './driver.types.js';
+import type { DriverMeResponse, UpdateDriverStatusResponse, OpenPoolItem } from './driver.types.js';
 
 export class DriverService {
   constructor(private readonly driverRepo: DriverRepository) {}
@@ -72,7 +72,26 @@ export class DriverService {
       },
     };
   }
+
+  async getOpenPoolsForDriver(driverId: string): Promise<OpenPoolItem[]> {
+    const driver = await this.driverRepo.findDriverById(driverId);
+    if (!driver) {
+      throw new NotFoundError('Driver profile not found');
+    }
+
+    const vehicle = await this.driverRepo.findVehicleByDriverId(driverId);
+    if (!vehicle) {
+      throw new NotFoundError('No vehicle assigned to driver');
+    }
+
+    if (vehicle.status !== 'ONLINE') {
+      return [];
+    }
+
+    return this.driverRepo.findOpenPoolsForDriver(driverId, vehicle.capacity);
+  }
 }
 
 export default DriverService;
+
 
