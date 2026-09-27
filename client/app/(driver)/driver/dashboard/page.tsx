@@ -10,6 +10,7 @@ import {
   DriverDashboardHeader,
   DriverOffDutyBanner,
   OpenPoolsFeed,
+  ActivePoolConsole,
 } from "@/features/driver";
 
 export default function DriverDashboardPage() {
@@ -89,36 +90,42 @@ export default function DriverDashboardPage() {
         isUpdatingStatus={updateStatusMutation.isPending}
       />
 
-      {isOffline && (
-        <DriverOffDutyBanner
-          onGoOnline={() => handleToggleStatus("ONLINE")}
-          isUpdating={updateStatusMutation.isPending}
-        />
-      )}
+      {hasActivePool && data?.activePool ? (
+        <ActivePoolConsole poolId={data.activePool.id} />
+      ) : (
+        <>
+          {isOffline && (
+            <DriverOffDutyBanner
+              onGoOnline={() => handleToggleStatus("ONLINE")}
+              isUpdating={updateStatusMutation.isPending}
+            />
+          )}
 
-      {isOnline && !hasActivePool && (
-        <OpenPoolsFeed
-          pools={openPools}
-          isLoading={isOpenPoolsLoading}
-          isFetching={isOpenPoolsFetching}
-          isError={isOpenPoolsError}
-          error={openPoolsError}
-          acceptingPoolId={
-            acceptPoolMutation.isPending
-              ? acceptPoolMutation.variables?.poolId
-              : undefined
-          }
-          decliningPoolId={
-            declinePoolMutation.isPending
-              ? declinePoolMutation.variables?.poolId
-              : undefined
-          }
-          acceptError={acceptError}
-          onClearAcceptError={() => setAcceptError(null)}
-          onRefresh={() => refetchOpenPools()}
-          onAccept={handleAcceptPool}
-          onDecline={handleDeclinePool}
-        />
+          {isOnline && (
+            <OpenPoolsFeed
+              pools={openPools}
+              isLoading={isOpenPoolsLoading}
+              isFetching={isOpenPoolsFetching}
+              isError={isOpenPoolsError}
+              error={openPoolsError}
+              acceptingPoolId={
+                acceptPoolMutation.isPending
+                  ? acceptPoolMutation.variables?.poolId
+                  : undefined
+              }
+              decliningPoolId={
+                declinePoolMutation.isPending
+                  ? declinePoolMutation.variables?.poolId
+                  : undefined
+              }
+              acceptError={acceptError}
+              onClearAcceptError={() => setAcceptError(null)}
+              onRefresh={() => refetchOpenPools()}
+              onAccept={handleAcceptPool}
+              onDecline={handleDeclinePool}
+            />
+          )}
+        </>
       )}
     </div>
   );

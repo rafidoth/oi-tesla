@@ -10,6 +10,9 @@ import type {
   OpenPoolItem,
   DeclinePoolResponse,
   AcceptPoolResponse,
+  DriverPoolDetailsResponse,
+  OpenPoolDestinationStop,
+  DriverPoolRosterMember,
 } from './driver.types.js';
 import type { DeclinePoolInput } from './driver.schema.js';
 
@@ -164,6 +167,50 @@ export class DriverService {
     } catch (err: unknown) {
       this.handleAcceptanceError(err);
     }
+  }
+
+  async getDriverPoolById(
+    driverId: string,
+    poolId: string
+  ): Promise<DriverPoolDetailsResponse> {
+    const driver = await this.driverRepo.findDriverById(driverId);
+    if (!driver) {
+      throw new NotFoundError('Driver profile not found');
+    }
+
+    const pool = await this.driverRepo.findDriverPoolById(poolId, driverId);
+    if (!pool) {
+      throw new NotFoundError('Pool not found');
+    }
+
+    const roster = await this.driverRepo.findActiveRosterForPool(poolId, pool.status);
+    const destinationStops = this.extractDestinationStops(roster);
+
+    return {
+      id: pool.id,
+      pickupLocationId: pool.pickupLocationId,
+      pickupLocationName: pool.pickupLocationName,
+      status: pool.status,
+      capacity: pool.capacity,
+      occupiedSeats: pool.occupiedSeats,
+      driverId: pool.driverId,
+      vehicleId: pool.vehicleId,
+      destinationStops,
+      roster,
+      createdAt: pool.createdAt,
+      updatedAt: pool.updatedAt,
+    };
+  }
+
+  private extractDestinationStops(roster: DriverPoolRosterMember[]): OpenPoolDestinationStop[] {
+    const stopMap = new Map<number, string>();
+    for (const member of roster) {
+      stopMap.set(member.destLocationId, member.destLocationName);
+    }
+    return Array.from(stopMap.entries()).map(([locationId, locationName]) => ({
+      locationId,
+      locationName,
+    }));
   }
 
   private async validateDriverAvailability(driverId: string): Promise<Vehicle> {

@@ -9,3 +9,6 @@ export * from "./components/open-pool-card";
 export * from "./components/open-pools-feed";
 export * from "./hooks/use-decline-pool-mutation";
 export * from "./hooks/use-accept-pool-mutation";
+export * from "./hooks/use-driver-pool-details-query";
+export * from "./components/active-pool-console";
+

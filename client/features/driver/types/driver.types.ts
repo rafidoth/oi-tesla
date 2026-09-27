@@ -78,3 +78,35 @@ export interface AcceptPoolResponse {
     updatedAt: string;
   };
 }
+
+export interface DriverPoolRosterMember {
+  id: string;
+  passengerId: string;
+  passengerName: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  destLocationId: number;
+  destLocationName: string;
+  seats: number;
+  farePaisa: number;
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string | null;
+  createdAt: string;
+}
+
+export interface DriverPoolDetailsResponse {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: string;
+  capacity: number;
+  occupiedSeats: number;
+  driverId: string;
+  vehicleId: string;
+  destinationStops: OpenPoolDestinationStop[];
+  roster: DriverPoolRosterMember[];
+  createdAt: string;
+  updatedAt: string;
+}
+

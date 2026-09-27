@@ -5,7 +5,6 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge, type RideStatus } from "@/components/custom/status-badge";
 import { ToggleOnline } from "@/components/custom/toggle-online";
 import type { DriverMeResponse } from "../types/driver.types";
 
@@ -82,11 +81,11 @@ export function DriverDashboardHeader({
     );
   }
 
-  const { driver, vehicle, activePool } = data;
+  const { driver, vehicle } = data;
   const isOnline = vehicle.status === "ONLINE";
 
   return (
-    <Card className="p-5 border-none ">
+    <Card className="p-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Left: Driver and Vehicle Details */}
         <div className="space-y-1">
@@ -156,22 +155,6 @@ export function DriverDashboardHeader({
           </div>
         </div>
       </div>
-
-      {/* Active Pool summary banner if currently in an active pool */}
-      {activePool && (
-        <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs text-ink-secondary">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-ink">Active Pool:</span>
-            <StatusBadge status={activePool.status as RideStatus} />
-            {activePool.pickupLocationName && (
-              <span>at {activePool.pickupLocationName}</span>
-            )}
-          </div>
-          <div className="font-semibold text-ink">
-            {activePool.occupiedSeats} / {activePool.capacity} seats
-          </div>
-        </div>
-      )}
     </Card>
   );
 }

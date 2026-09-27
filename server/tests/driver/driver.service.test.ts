@@ -18,6 +18,8 @@ describe('DriverService Unit Tests', () => {
     hasDriverDeclinedPool: ReturnType<typeof vi.fn>;
     assignDriverToPool: ReturnType<typeof vi.fn>;
     findActiveMembersByPoolId: ReturnType<typeof vi.fn>;
+    findDriverPoolById: ReturnType<typeof vi.fn>;
+    findActiveRosterForPool: ReturnType<typeof vi.fn>;
     withTransaction: ReturnType<typeof vi.fn>;
   };
   let mockEventsService: {
@@ -36,6 +38,8 @@ describe('DriverService Unit Tests', () => {
       hasDriverDeclinedPool: vi.fn(),
       assignDriverToPool: vi.fn(),
       findActiveMembersByPoolId: vi.fn(),
+      findDriverPoolById: vi.fn(),
+      findActiveRosterForPool: vi.fn(),
       withTransaction: vi.fn((callback) => callback({})),
     };
     mockEventsService = {
@@ -784,6 +788,98 @@ describe('DriverService Unit Tests', () => {
       new ConflictError('DRIVER_HAS_ACTIVE_POOL', 'Driver already has an active pool in progress')
     );
   });
+
+  describe('getDriverPoolById', () => {
+    it('throws NotFoundError if driver does not exist', async () => {
+      mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+      await expect(driverService.getDriverPoolById('non-existent', 'pool-1')).rejects.toThrow(
+        new NotFoundError('Driver profile not found')
+      );
+    });
+
+    it('throws NotFoundError if pool does not exist or does not belong to driver', async () => {
+      mockDriverRepo.findDriverById.mockResolvedValue({
+        id: CAST.driver.id,
+        name: CAST.driver.name,
+        email: CAST.driver.email,
+        role: 'DRIVER',
+      });
+      mockDriverRepo.findDriverPoolById.mockResolvedValue(null);
+
+      await expect(driverService.getDriverPoolById(CAST.driver.id, 'pool-foreign')).rejects.toThrow(
+        new NotFoundError('Pool not found')
+      );
+    });
+
+    it('returns pool details with destination stops and roster', async () => {
+      const now = new Date();
+      mockDriverRepo.findDriverById.mockResolvedValue({
+        id: CAST.driver.id,
+        name: CAST.driver.name,
+        email: CAST.driver.email,
+        role: 'DRIVER',
+      });
+      mockDriverRepo.findDriverPoolById.mockResolvedValue({
+        id: 'pool-1',
+        pickupLocationId: 1,
+        pickupLocationName: 'Gulshan 1 Circle',
+        status: 'MATCHED',
+        capacity: 3,
+        occupiedSeats: 2,
+        driverId: CAST.driver.id,
+        vehicleId: CAST.driver.vehicle.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      mockDriverRepo.findActiveRosterForPool.mockResolvedValue([
+        {
+          id: 'ride-1',
+          passengerId: 'p-1',
+          passengerName: 'Nusrat Rahman',
+          pickupLocationId: 1,
+          pickupLocationName: 'Gulshan 1 Circle',
+          destLocationId: 2,
+          destLocationName: 'Banani 11',
+          seats: 1,
+          farePaisa: 12000,
+          status: 'MATCHED',
+          paymentMethod: 'CASH',
+          paymentStatus: 'PENDING',
+          createdAt: now,
+        },
+        {
+          id: 'ride-2',
+          passengerId: 'p-2',
+          passengerName: 'Rafiqul Hasan',
+          pickupLocationId: 1,
+          pickupLocationName: 'Gulshan 1 Circle',
+          destLocationId: 3,
+          destLocationName: 'Airport Terminal 3',
+          seats: 1,
+          farePaisa: 24000,
+          status: 'MATCHED',
+          paymentMethod: 'TESLAPAY',
+          paymentStatus: 'PENDING',
+          createdAt: now,
+        },
+      ]);
+
+      const result = await driverService.getDriverPoolById(CAST.driver.id, 'pool-1');
+
+      expect(result.id).toBe('pool-1');
+      expect(result.pickupLocationName).toBe('Gulshan 1 Circle');
+      expect(result.status).toBe('MATCHED');
+      expect(result.destinationStops).toEqual([
+        { locationId: 2, locationName: 'Banani 11' },
+        { locationId: 3, locationName: 'Airport Terminal 3' },
+      ]);
+      expect(result.roster).toHaveLength(2);
+      expect(result.roster[0].passengerName).toBe('Nusrat Rahman');
+      expect(result.roster[1].passengerName).toBe('Rafiqul Hasan');
+    });
+  });
 });
+
 
 

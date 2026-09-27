@@ -1,4 +1,5 @@
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import type { db } from '../../db/client.js';
 import {
   users,
@@ -8,15 +9,18 @@ import {
   passengerRides,
   rideRequests,
   rideEvents,
+  payments,
   type User,
   type Vehicle,
   type Pool,
 } from '../../db/schema/index.js';
+import { Ride } from '../rides/domain/Ride.js';
 import type {
   DriverActivePool,
   OpenPoolItem,
   OpenPoolMemberRequest,
   OpenPoolDestinationStop,
+  DriverPoolRosterMember,
 } from './driver.types.js';
 
 
@@ -80,6 +84,120 @@ export class DriverRepository {
       .returning();
 
     return updatedVehicle ?? null;
+  }
+
+  async findDriverPoolById(
+    poolId: string,
+    driverId: string
+  ): Promise<{
+    id: string;
+    pickupLocationId: number;
+    pickupLocationName: string;
+    status: string;
+    capacity: number;
+    occupiedSeats: number;
+    driverId: string;
+    vehicleId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null> {
+    const [pool] = await this.dbClient
+      .select({
+        id: pools.id,
+        pickupLocationId: pools.pickupLocationId,
+        pickupLocationName: locations.name,
+        status: pools.status,
+        capacity: pools.capacity,
+        occupiedSeats: pools.occupiedSeats,
+        driverId: pools.driverId,
+        vehicleId: pools.vehicleId,
+        createdAt: pools.createdAt,
+        updatedAt: pools.updatedAt,
+      })
+      .from(pools)
+      .innerJoin(locations, eq(pools.pickupLocationId, locations.id))
+      .where(and(eq(pools.id, poolId), eq(pools.driverId, driverId)))
+      .limit(1);
+
+    if (!pool?.driverId || !pool?.vehicleId) {
+      return null;
+    }
+
+    return {
+      ...pool,
+      driverId: pool.driverId,
+      vehicleId: pool.vehicleId,
+    };
+  }
+
+  async findActiveRosterForPool(
+    poolId: string,
+    poolStatus: string
+  ): Promise<DriverPoolRosterMember[]> {
+    const pickupLocations = alias(locations, 'pickup_loc');
+    const destLocations = alias(locations, 'dest_loc');
+
+    const rows = await this.dbClient
+      .select({
+        id: passengerRides.id,
+        passengerId: passengerRides.passengerId,
+        passengerName: users.name,
+        pickupLocationId: rideRequests.pickupLocationId,
+        pickupLocationName: pickupLocations.name,
+        destLocationId: rideRequests.destLocationId,
+        destLocationName: destLocations.name,
+        seats: passengerRides.seats,
+        farePaisa: passengerRides.farePaisa,
+        estimateFarePaisa: rideRequests.estimateFarePaisa,
+        paymentMethod: rideRequests.paymentMethod,
+        paymentStatus: payments.status,
+        completedAt: passengerRides.completedAt,
+        cancelledAt: passengerRides.cancelledAt,
+        createdAt: passengerRides.createdAt,
+        updatedAt: passengerRides.updatedAt,
+      })
+      .from(passengerRides)
+      .innerJoin(users, eq(passengerRides.passengerId, users.id))
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .innerJoin(pickupLocations, eq(rideRequests.pickupLocationId, pickupLocations.id))
+      .innerJoin(destLocations, eq(rideRequests.destLocationId, destLocations.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
+      .where(and(eq(passengerRides.poolId, poolId), isNull(passengerRides.cancelledAt)))
+      .orderBy(asc(passengerRides.createdAt));
+
+    return rows.map((row) => this.mapRosterMemberRow(row, poolId, poolStatus));
+  }
+
+  private mapRosterMemberRow(row: any, poolId: string, poolStatus: string): DriverPoolRosterMember {
+    const ride = new Ride({
+      id: row.id,
+      rideRequestId: row.id,
+      passengerId: row.passengerId,
+      poolId,
+      seats: row.seats,
+      farePaisa: row.farePaisa,
+      cancelledAt: row.cancelledAt,
+      completedAt: row.completedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      poolStatus,
+    });
+
+    return {
+      id: row.id,
+      passengerId: row.passengerId,
+      passengerName: row.passengerName,
+      pickupLocationId: row.pickupLocationId,
+      pickupLocationName: row.pickupLocationName,
+      destLocationId: row.destLocationId,
+      destLocationName: row.destLocationName,
+      seats: row.seats,
+      farePaisa: row.farePaisa ?? row.estimateFarePaisa,
+      status: ride.status,
+      paymentMethod: row.paymentMethod,
+      paymentStatus: row.paymentStatus ?? 'PENDING',
+      createdAt: row.createdAt,
+    };
   }
 
   async findPoolById(poolId: string, tx?: any): Promise<Pool | null> {

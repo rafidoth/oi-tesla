@@ -13,6 +13,7 @@ describe('DriverController Unit Tests', () => {
     getOpenPoolsForDriver: ReturnType<typeof vi.fn>;
     declinePool: ReturnType<typeof vi.fn>;
     acceptPool: ReturnType<typeof vi.fn>;
+    getDriverPoolById: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -25,6 +26,7 @@ describe('DriverController Unit Tests', () => {
       getOpenPoolsForDriver: vi.fn(),
       declinePool: vi.fn(),
       acceptPool: vi.fn(),
+      getDriverPoolById: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -373,6 +375,76 @@ describe('DriverController Unit Tests', () => {
 
     expect(next).toHaveBeenCalledWith(error);
   });
+
+  describe('getDriverPoolById', () => {
+    it('successfully returns 200 with driver pool details', async () => {
+      const expectedPool = {
+        id: 'pool-uuid-1',
+        pickupLocationId: 1,
+        pickupLocationName: 'Gulshan 1 Circle',
+        status: 'MATCHED',
+        capacity: 3,
+        occupiedSeats: 2,
+        driverId: CAST.driver.id,
+        vehicleId: CAST.driver.vehicle.id,
+        destinationStops: [{ locationId: 2, locationName: 'Banani 11' }],
+        roster: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      mockDriverService.getDriverPoolById.mockResolvedValue(expectedPool);
+
+      const req = {
+        user: {
+          id: CAST.driver.id,
+          sub: CAST.driver.id,
+          email: CAST.driver.email,
+          role: 'DRIVER' as const,
+        },
+        params: {
+          id: 'pool-uuid-1',
+        },
+      } as unknown as AuthenticatedRequest;
+
+      await controller.getDriverPoolById(req, res as Response, next);
+
+      expect(mockDriverService.getDriverPoolById).toHaveBeenCalledWith(CAST.driver.id, 'pool-uuid-1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expectedPool);
+    });
+
+    it('delegates UnauthorizedError to next when user is unauthenticated', async () => {
+      const req = {
+        params: { id: 'pool-uuid-1' },
+      } as unknown as AuthenticatedRequest;
+
+      await controller.getDriverPoolById(req, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    });
+
+    it('delegates service errors to next on getDriverPoolById', async () => {
+      const error = new Error('Pool not found');
+      mockDriverService.getDriverPoolById.mockRejectedValue(error);
+
+      const req = {
+        user: {
+          id: CAST.driver.id,
+          sub: CAST.driver.id,
+          email: CAST.driver.email,
+          role: 'DRIVER' as const,
+        },
+        params: {
+          id: 'pool-uuid-1',
+        },
+      } as unknown as AuthenticatedRequest;
+
+      await controller.getDriverPoolById(req, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
 });
+
 
 
