@@ -9,6 +9,9 @@ import type { CandidatePoolData } from '../../src/modules/pools/domain/MatchingE
 import type { PoolRow } from '../../src/modules/pools/pools.repository.js';
 import type { SeatGuard } from '../../src/modules/pools/domain/SeatGuard.js';
 import { ConflictError } from '../../src/shared/errors/ConflictError.js';
+import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
+import { ForbiddenError } from '../../src/shared/errors/ForbiddenError.js';
+import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
 
 describe('PoolsService Unit Tests', () => {
   let mockPoolsRepo: Partial<PoolsRepository>;
@@ -558,6 +561,104 @@ describe('PoolsService Unit Tests', () => {
         stage3Shares.get('ride-rafiq')! +
         stage3Shares.get('ride-shirin')!
       ).toBe(15000);
+    });
+  });
+
+  describe('transitionPool', () => {
+    it('throws NotFoundError if pool does not exist', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue(null),
+      };
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository
+      );
+
+      await expect(
+        poolsService.transitionPool('missing-id', 'arrive', { id: 'd-1', role: 'DRIVER' })
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('throws ForbiddenError if actor is DRIVER but driverId does not match pool.driverId', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue({
+          id: 'pool-1',
+          driverId: 'assigned-driver-id',
+          status: 'MATCHED',
+        }),
+      };
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository
+      );
+
+      await expect(
+        poolsService.transitionPool('pool-1', 'arrive', { id: 'foreign-driver-id', role: 'DRIVER' })
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('throws ForbiddenError if actor is DRIVER and pool.driverId is null', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue({
+          id: 'pool-1',
+          driverId: null,
+          status: 'OPEN',
+        }),
+      };
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository
+      );
+
+      await expect(
+        poolsService.transitionPool('pool-1', 'arrive', { id: 'driver-id', role: 'DRIVER' })
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it('throws InvalidTransitionError on invalid transition attempt', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue({
+          id: 'pool-1',
+          driverId: 'driver-1',
+          status: 'MATCHED',
+        }),
+      };
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository
+      );
+
+      await expect(
+        poolsService.transitionPool('pool-1', 'start', { id: 'driver-1', role: 'DRIVER' })
+      ).rejects.toThrow(InvalidTransitionError);
+    });
+
+    it('successfully transitions pool status and updates repository', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue({
+          id: 'pool-1',
+          driverId: 'driver-1',
+          status: 'MATCHED',
+        }),
+        updatePoolStatus: vi.fn().mockResolvedValue(undefined),
+      };
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository
+      );
+
+      const result = await poolsService.transitionPool('pool-1', 'arrive', {
+        id: 'driver-1',
+        role: 'DRIVER',
+      });
+
+      expect(result).toEqual({
+        poolId: 'pool-1',
+        previousStatus: 'MATCHED',
+        newStatus: 'DRIVER_ARRIVED',
+        action: 'arrive',
+      });
+      expect(mockPoolsRepo.updatePoolStatus).toHaveBeenCalledWith('pool-1', 'DRIVER_ARRIVED', undefined);
     });
   });
 });

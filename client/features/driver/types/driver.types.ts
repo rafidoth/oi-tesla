@@ -110,3 +110,11 @@ export interface DriverPoolDetailsResponse {
   updatedAt: string;
 }
 
+export type PoolLifecycleAction = 'arrive' | 'start' | 'complete';
+
+export interface TransitionPoolResponse {
+  success: boolean;
+  poolId: string;
+  status: string;
+}
+

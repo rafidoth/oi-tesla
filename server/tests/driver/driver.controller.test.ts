@@ -14,6 +14,9 @@ describe('DriverController Unit Tests', () => {
     declinePool: ReturnType<typeof vi.fn>;
     acceptPool: ReturnType<typeof vi.fn>;
     getDriverPoolById: ReturnType<typeof vi.fn>;
+    arrivePool: ReturnType<typeof vi.fn>;
+    startPool: ReturnType<typeof vi.fn>;
+    completePool: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -27,6 +30,9 @@ describe('DriverController Unit Tests', () => {
       declinePool: vi.fn(),
       acceptPool: vi.fn(),
       getDriverPoolById: vi.fn(),
+      arrivePool: vi.fn(),
+      startPool: vi.fn(),
+      completePool: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -442,6 +448,91 @@ describe('DriverController Unit Tests', () => {
       await controller.getDriverPoolById(req, res as Response, next);
 
       expect(next).toHaveBeenCalledWith(error);
+    });
+  });
+
+  describe('Lifecycle Transition Endpoints', () => {
+    const authReq = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      params: { id: 'pool-uuid-1' },
+    } as unknown as AuthenticatedRequest;
+
+    const unauthReq = {
+      params: { id: 'pool-uuid-1' },
+    } as unknown as AuthenticatedRequest;
+
+    it('arrivePool returns 200 on success', async () => {
+      mockDriverService.arrivePool.mockResolvedValue({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'DRIVER_ARRIVED',
+      });
+
+      await controller.arrivePool(authReq, res as Response, next);
+
+      expect(mockDriverService.arrivePool).toHaveBeenCalledWith(CAST.driver.id, 'pool-uuid-1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'DRIVER_ARRIVED',
+      });
+    });
+
+    it('arrivePool delegates UnauthorizedError when unauthenticated', async () => {
+      await controller.arrivePool(unauthReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    });
+
+    it('startPool returns 200 on success', async () => {
+      mockDriverService.startPool.mockResolvedValue({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'STARTED',
+      });
+
+      await controller.startPool(authReq, res as Response, next);
+
+      expect(mockDriverService.startPool).toHaveBeenCalledWith(CAST.driver.id, 'pool-uuid-1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'STARTED',
+      });
+    });
+
+    it('startPool delegates UnauthorizedError when unauthenticated', async () => {
+      await controller.startPool(unauthReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    });
+
+    it('completePool returns 200 on success', async () => {
+      mockDriverService.completePool.mockResolvedValue({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'COMPLETED',
+      });
+
+      await controller.completePool(authReq, res as Response, next);
+
+      expect(mockDriverService.completePool).toHaveBeenCalledWith(CAST.driver.id, 'pool-uuid-1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        poolId: 'pool-uuid-1',
+        status: 'COMPLETED',
+      });
+    });
+
+    it('completePool delegates UnauthorizedError when unauthenticated', async () => {
+      await controller.completePool(unauthReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
     });
   });
 });

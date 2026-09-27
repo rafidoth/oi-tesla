@@ -6,6 +6,8 @@ import type {
   OpenPoolItem,
   AcceptPoolResponse,
   DriverPoolDetailsResponse,
+  PoolLifecycleAction,
+  TransitionPoolResponse,
 } from "../types/driver.types";
 
 export const driverApi = {
@@ -53,6 +55,16 @@ export const driverApi = {
     const response = await apiClient.post<{ success: boolean; poolId: string }>(
       baseUrlWrapper(`/driver/pools/${poolId}/decline`),
       reason ? { reason } : {}
+    );
+    return response.data;
+  },
+
+  async transitionPool(
+    poolId: string,
+    action: PoolLifecycleAction
+  ): Promise<TransitionPoolResponse> {
+    const response = await apiClient.post<TransitionPoolResponse>(
+      baseUrlWrapper(`/driver/pools/${poolId}/${action}`)
     );
     return response.data;
   },

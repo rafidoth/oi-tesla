@@ -8,6 +8,14 @@ import { SeatGuard } from './domain/SeatGuard.js';
 import { FareCalculator } from './domain/FareCalculator.js';
 import type { EventsService } from '../events/events.service.js';
 import { ConflictError } from '../../shared/errors/ConflictError.js';
+import { NotFoundError } from '../../shared/errors/NotFoundError.js';
+import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
+import {
+  PoolStateMachine,
+  type PoolStatus,
+  type PoolAction,
+  type ActorRole,
+} from './domain/PoolStateMachine.js';
 
 const logger = pino();
 
@@ -190,6 +198,37 @@ export class PoolsService {
 
     // 10. Return shares
     return shares;
+  }
+
+  async transitionPool(
+    poolId: string,
+    action: PoolAction,
+    actor: { id?: string; role: ActorRole },
+    tx?: any
+  ): Promise<{ poolId: string; previousStatus: PoolStatus; newStatus: PoolStatus; action: PoolAction }> {
+    const pool = await this.findPoolOrThrow(poolId, tx);
+    this.assertDriverOwnership(pool.driverId, actor);
+    const previousStatus = pool.status as PoolStatus;
+    const newStatus = PoolStateMachine.getNextStatus(previousStatus, action, actor.role);
+    await this.poolsRepo.updatePoolStatus(poolId, newStatus, tx);
+    return { poolId, previousStatus, newStatus, action };
+  }
+
+  private async findPoolOrThrow(poolId: string, tx?: any) {
+    const pool = await this.poolsRepo.findPoolById(poolId, tx);
+    if (!pool) {
+      throw new NotFoundError('POOL_NOT_FOUND', 'Pool not found');
+    }
+    return pool;
+  }
+
+  private assertDriverOwnership(
+    poolDriverId: string | null,
+    actor: { id?: string; role: ActorRole }
+  ): void {
+    if (actor.role === 'DRIVER' && (!poolDriverId || poolDriverId !== actor.id)) {
+      throw new ForbiddenError('Driver is not assigned to this pool');
+    }
   }
 }
 

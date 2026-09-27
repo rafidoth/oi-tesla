@@ -4,6 +4,7 @@ import type { DriverRepository } from '../../src/modules/driver/driver.repositor
 import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
 import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
 import { ConflictError } from '../../src/shared/errors/ConflictError.js';
+import { ForbiddenError } from '../../src/shared/errors/ForbiddenError.js';
 import type { EventsService } from '../../src/modules/events/events.service.js';
 import { CAST } from '../fixtures/cast.js';
 
@@ -20,6 +21,7 @@ describe('DriverService Unit Tests', () => {
     findActiveMembersByPoolId: ReturnType<typeof vi.fn>;
     findDriverPoolById: ReturnType<typeof vi.fn>;
     findActiveRosterForPool: ReturnType<typeof vi.fn>;
+    updatePoolStatus: ReturnType<typeof vi.fn>;
     withTransaction: ReturnType<typeof vi.fn>;
   };
   let mockEventsService: {
@@ -40,6 +42,7 @@ describe('DriverService Unit Tests', () => {
       findActiveMembersByPoolId: vi.fn(),
       findDriverPoolById: vi.fn(),
       findActiveRosterForPool: vi.fn(),
+      updatePoolStatus: vi.fn().mockResolvedValue(undefined),
       withTransaction: vi.fn((callback) => callback({})),
     };
     mockEventsService = {
@@ -877,6 +880,157 @@ describe('DriverService Unit Tests', () => {
       expect(result.roster).toHaveLength(2);
       expect(result.roster[0].passengerName).toBe('Nusrat Rahman');
       expect(result.roster[1].passengerName).toBe('Rafiqul Hasan');
+    });
+  });
+
+  describe('Lifecycle Transitions', () => {
+    const driverId = CAST.driver.id;
+    const poolId = 'pool-lifecycle-1';
+
+    beforeEach(() => {
+      mockDriverRepo.findDriverById.mockResolvedValue({
+        id: driverId,
+        name: CAST.driver.name,
+        email: CAST.driver.email,
+        role: 'DRIVER',
+      });
+    });
+
+    it('rejects lifecycle transition if driver does not exist', async () => {
+      mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+      await expect(driverService.arrivePool('non-existent-driver', poolId)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('rejects lifecycle transition if pool does not exist', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue(null);
+
+      await expect(driverService.arrivePool(driverId, 'missing-pool')).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('rejects lifecycle transition with ForbiddenError if calling driver is not pool owner', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId: 'another-driver-id',
+        status: 'MATCHED',
+      });
+
+      await expect(driverService.arrivePool(driverId, poolId)).rejects.toThrow(ForbiddenError);
+    });
+
+    it('rejects lifecycle transition with ForbiddenError if pool has no assigned driver', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId: null,
+        status: 'OPEN',
+      });
+
+      await expect(driverService.arrivePool(driverId, poolId)).rejects.toThrow(ForbiddenError);
+    });
+
+    it('successfully executes arrive transition on MATCHED pool and logs audit event', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'MATCHED',
+      });
+
+      const response = await driverService.arrivePool(driverId, poolId);
+
+      expect(response).toEqual({
+        success: true,
+        poolId,
+        status: 'DRIVER_ARRIVED',
+      });
+      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'DRIVER_ARRIVED', expect.anything());
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        {
+          event: 'DRIVER_ARRIVED',
+          actorType: 'DRIVER',
+          actorId: driverId,
+          poolId,
+          fromState: 'MATCHED',
+          toState: 'DRIVER_ARRIVED',
+          payload: {
+            arrivedAt: expect.any(String),
+          },
+        },
+        expect.anything()
+      );
+    });
+
+    it('rejects arrive transition if pool is not in MATCHED state', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'STARTED',
+      });
+
+      await expect(driverService.arrivePool(driverId, poolId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('successfully executes start transition on DRIVER_ARRIVED pool', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'DRIVER_ARRIVED',
+      });
+
+      const response = await driverService.startPool(driverId, poolId);
+
+      expect(response).toEqual({
+        success: true,
+        poolId,
+        status: 'STARTED',
+      });
+      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'STARTED');
+    });
+
+    it('successfully executes complete transition on STARTED pool', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'STARTED',
+      });
+
+      const response = await driverService.completePool(driverId, poolId);
+
+      expect(response).toEqual({
+        success: true,
+        poolId,
+        status: 'COMPLETED',
+      });
+      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'COMPLETED');
+    });
+
+    it('rejects out-of-order transition (start when MATCHED) with InvalidTransitionError', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'MATCHED',
+      });
+
+      await expect(driverService.startPool(driverId, poolId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('rejects transition on terminal states (COMPLETED / CANCELLED)', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'COMPLETED',
+      });
+
+      await expect(driverService.completePool(driverId, poolId)).rejects.toThrow(
+        InvalidTransitionError
+      );
     });
   });
 });

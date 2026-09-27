@@ -7,10 +7,8 @@ import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
 import { StatusBadge, type RideStatus } from "@/components/custom/status-badge";
 import { useDriverPoolDetailsQuery } from "../hooks/use-driver-pool-details-query";
-import type {
-  DriverPoolDetailsResponse,
-  DriverPoolRosterMember,
-} from "../types/driver.types";
+import { PoolLifecycleActions } from "./pool-lifecycle-actions";
+import type { DriverPoolRosterMember } from "../types/driver.types";
 
 interface ActivePoolConsoleProps {
   poolId: string;
@@ -52,6 +50,7 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
               capacity={pool.capacity}
               occupiedSeats={pool.occupiedSeats}
             />
+            <PoolLifecycleActions poolId={pool.id} status={pool.status} />
           </Card>
         </div>
 

@@ -241,6 +241,17 @@ export class DriverRepository {
     return updatedPool ?? null;
   }
 
+  async updatePoolStatus(poolId: string, status: string, tx?: any): Promise<void> {
+    const client = tx ?? this.dbClient;
+    await client
+      .update(pools)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(pools.id, poolId));
+  }
+
   async findActiveMembersByPoolId(
     poolId: string,
     tx?: any

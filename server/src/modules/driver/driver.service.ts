@@ -3,6 +3,9 @@ import type { EventsService } from '../events/events.service.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
 import { InvalidTransitionError } from '../../shared/errors/InvalidTransitionError.js';
 import { ConflictError } from '../../shared/errors/ConflictError.js';
+import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
+import { PoolStateMachine, type PoolStatus, type PoolAction } from '../pools/domain/PoolStateMachine.js';
+import type { PoolsService } from '../pools/pools.service.js';
 import type { Vehicle, Pool } from '../../db/schema/index.js';
 import type {
   DriverMeResponse,
@@ -19,7 +22,8 @@ import type { DeclinePoolInput } from './driver.schema.js';
 export class DriverService {
   constructor(
     private readonly driverRepo: DriverRepository,
-    private readonly eventsService: EventsService
+    private readonly eventsService: EventsService,
+    private readonly poolsService?: PoolsService
   ) {}
 
   async getDriverMe(driverId: string): Promise<DriverMeResponse> {
@@ -200,6 +204,108 @@ export class DriverService {
       createdAt: pool.createdAt,
       updatedAt: pool.updatedAt,
     };
+  }
+
+  async arrivePool(
+    driverId: string,
+    poolId: string
+  ): Promise<{ success: boolean; poolId: string; status: PoolStatus }> {
+    await this.assertDriverExists(driverId);
+    return await this.driverRepo.withTransaction(async (tx) => {
+      const pool = await this.findAndValidateDriverPool(poolId, driverId, tx);
+      this.assertPoolIsMatched(pool.status);
+      await this.executePoolTransition(poolId, 'arrive', driverId, tx);
+      await this.recordArrivalAuditEvent(tx, poolId, driverId);
+      return { success: true, poolId, status: 'DRIVER_ARRIVED' };
+    });
+  }
+
+  async startPool(driverId: string, poolId: string) {
+    return this.transitionPoolLifecycle(driverId, poolId, 'start');
+  }
+
+  async completePool(driverId: string, poolId: string) {
+    return this.transitionPoolLifecycle(driverId, poolId, 'complete');
+  }
+
+  async transitionPoolLifecycle(
+    driverId: string,
+    poolId: string,
+    action: 'arrive' | 'start' | 'complete'
+  ): Promise<{ success: boolean; poolId: string; status: PoolStatus }> {
+    await this.assertDriverExists(driverId);
+    if (this.poolsService) {
+      const result = await this.poolsService.transitionPool(poolId, action, {
+        id: driverId,
+        role: 'DRIVER',
+      });
+      return { success: true, poolId: result.poolId, status: result.newStatus };
+    }
+    const pool = await this.findAndValidateDriverPool(poolId, driverId);
+    const nextStatus = PoolStateMachine.getNextStatus(pool.status as PoolStatus, action, 'DRIVER');
+    await this.driverRepo.updatePoolStatus(poolId, nextStatus);
+    return { success: true, poolId, status: nextStatus };
+  }
+
+  private assertPoolIsMatched(status: string): void {
+    if (status !== 'MATCHED') {
+      throw new InvalidTransitionError(
+        'INVALID_STATE_TRANSITION',
+        `Cannot mark arrival when pool is in status ${status}`
+      );
+    }
+  }
+
+  private async executePoolTransition(
+    poolId: string,
+    action: PoolAction,
+    driverId: string,
+    tx: any
+  ): Promise<void> {
+    if (this.poolsService) {
+      await this.poolsService.transitionPool(poolId, action, { id: driverId, role: 'DRIVER' }, tx);
+    } else {
+      await this.driverRepo.updatePoolStatus(poolId, 'DRIVER_ARRIVED', tx);
+    }
+  }
+
+  private async recordArrivalAuditEvent(
+    tx: any,
+    poolId: string,
+    driverId: string
+  ): Promise<void> {
+    await this.eventsService.logRideEvent(
+      {
+        event: 'DRIVER_ARRIVED',
+        actorType: 'DRIVER',
+        actorId: driverId,
+        poolId,
+        fromState: 'MATCHED',
+        toState: 'DRIVER_ARRIVED',
+        payload: {
+          arrivedAt: new Date().toISOString(),
+        },
+      },
+      tx
+    );
+  }
+
+  private async assertDriverExists(driverId: string): Promise<void> {
+    const driver = await this.driverRepo.findDriverById(driverId);
+    if (!driver) {
+      throw new NotFoundError('Driver profile not found');
+    }
+  }
+
+  private async findAndValidateDriverPool(poolId: string, driverId: string, tx?: any): Promise<Pool> {
+    const pool = await this.driverRepo.findPoolById(poolId, tx);
+    if (!pool) {
+      throw new NotFoundError('Pool not found');
+    }
+    if (!pool.driverId || pool.driverId !== driverId) {
+      throw new ForbiddenError('Driver is not assigned to this pool');
+    }
+    return pool;
   }
 
   private extractDestinationStops(roster: DriverPoolRosterMember[]): OpenPoolDestinationStop[] {

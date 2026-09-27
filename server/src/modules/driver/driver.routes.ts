@@ -58,6 +58,30 @@ export function createDriverRouter(controller: DriverController): Router {
     (req, res, next) => controller.declinePool(req, res, next)
   );
 
+  router.post(
+    '/pools/:id/arrive',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.arrivePool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/start',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.startPool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/complete',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.completePool(req, res, next)
+  );
+
   return router;
 }
 

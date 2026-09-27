@@ -101,6 +101,44 @@ export class DriverController {
       next(err);
     }
   }
+
+  async arrivePool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = this.extractDriverId(req);
+      const response = await this.driverService.arrivePool(driverId, req.params.id);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async startPool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = this.extractDriverId(req);
+      const response = await this.driverService.startPool(driverId, req.params.id);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async completePool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = this.extractDriverId(req);
+      const response = await this.driverService.completePool(driverId, req.params.id);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  private extractDriverId(req: AuthenticatedRequest): string {
+    const driverId = req.user?.sub || req.user?.id;
+    if (!driverId) {
+      throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
+    }
+    return driverId;
+  }
 }
 
 export default DriverController;
