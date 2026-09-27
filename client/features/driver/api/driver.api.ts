@@ -30,6 +30,17 @@ export const driverApi = {
     );
     return response.data;
   },
+
+  async declinePool(
+    poolId: string,
+    reason?: string
+  ): Promise<{ success: boolean; poolId: string }> {
+    const response = await apiClient.post<{ success: boolean; poolId: string }>(
+      baseUrlWrapper(`/driver/pools/${poolId}/decline`),
+      reason ? { reason } : {}
+    );
+    return response.data;
+  },
 };
 
 export default driverApi;

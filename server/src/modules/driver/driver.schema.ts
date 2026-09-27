@@ -14,4 +14,16 @@ export const getDriverPoolsQuerySchema = z.object({
 });
 
 export type GetDriverPoolsQueryInput = z.infer<typeof getDriverPoolsQuerySchema>;
+export const poolIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
 
+export type PoolIdParamsInput = z.infer<typeof poolIdParamsSchema>;
+
+export const declinePoolSchema = z
+  .object({
+    reason: z.string().trim().max(255).optional(),
+  })
+  .default({});
+
+export type DeclinePoolInput = z.infer<typeof declinePoolSchema>;

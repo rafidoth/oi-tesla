@@ -1,9 +1,20 @@
 import { DriverRepository } from './driver.repository.js';
+import type { EventsService } from '../events/events.service.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
-import type { DriverMeResponse, UpdateDriverStatusResponse, OpenPoolItem } from './driver.types.js';
+import { InvalidTransitionError } from '../../shared/errors/InvalidTransitionError.js';
+import type {
+  DriverMeResponse,
+  UpdateDriverStatusResponse,
+  OpenPoolItem,
+  DeclinePoolResponse,
+} from './driver.types.js';
+import type { DeclinePoolInput } from './driver.schema.js';
 
 export class DriverService {
-  constructor(private readonly driverRepo: DriverRepository) {}
+  constructor(
+    private readonly driverRepo: DriverRepository,
+    private readonly eventsService: EventsService
+  ) {}
 
   async getDriverMe(driverId: string): Promise<DriverMeResponse> {
     const driver = await this.driverRepo.findDriverById(driverId);
@@ -89,6 +100,52 @@ export class DriverService {
     }
 
     return this.driverRepo.findOpenPoolsForDriver(driverId, vehicle.capacity);
+  }
+
+  async declinePool(
+    driverId: string,
+    poolId: string,
+    input?: DeclinePoolInput
+  ): Promise<DeclinePoolResponse> {
+    const driver = await this.driverRepo.findDriverById(driverId);
+    if (!driver) {
+      throw new NotFoundError('Driver profile not found');
+    }
+
+    const pool = await this.driverRepo.findPoolById(poolId);
+    if (!pool) {
+      throw new NotFoundError('Pool not found');
+    }
+
+    if (pool.status !== 'OPEN' || pool.driverId !== null) {
+      throw new InvalidTransitionError(
+        'INVALID_POOL_STATE',
+        `Pool cannot be declined in status ${pool.status}`
+      );
+    }
+
+    const isAlreadyDeclined = await this.driverRepo.hasDriverDeclinedPool(driverId, poolId);
+    if (isAlreadyDeclined) {
+      return {
+        success: true,
+        poolId,
+      };
+    }
+
+    await this.eventsService.logRideEvent({
+      event: 'DRIVER_DECLINED',
+      actorType: 'DRIVER',
+      actorId: driverId,
+      poolId,
+      fromState: 'OPEN',
+      toState: 'OPEN',
+      payload: input?.reason ? { reason: input.reason } : undefined,
+    });
+
+    return {
+      success: true,
+      poolId,
+    };
   }
 }
 

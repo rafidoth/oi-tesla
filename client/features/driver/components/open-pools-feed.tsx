@@ -14,6 +14,7 @@ interface OpenPoolsFeedProps {
   isFetching?: boolean;
   isError?: boolean;
   error?: Error | null;
+  decliningPoolId?: string | null;
   onRefresh?: () => void;
   onAccept?: (poolId: string) => void;
   onDecline?: (poolId: string) => void;
@@ -25,6 +26,7 @@ export function OpenPoolsFeed({
   isFetching = false,
   isError = false,
   error,
+  decliningPoolId,
   onRefresh,
   onAccept,
   onDecline,
@@ -129,6 +131,7 @@ export function OpenPoolsFeed({
               pool={pool}
               onAccept={onAccept}
               onDecline={onDecline}
+              isDeclining={decliningPoolId === pool.id}
             />
           ))}
         </div>

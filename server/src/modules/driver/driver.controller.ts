@@ -2,7 +2,7 @@ import type { Response, NextFunction } from 'express';
 import type { AuthenticatedRequest } from '../../shared/types/AuthenticatedRequest.js';
 import { DriverService } from './driver.service.js';
 import { UnauthorizedError } from '../../shared/errors/UnauthorizedError.js';
-import type { UpdateDriverStatusInput } from './driver.schema.js';
+import type { UpdateDriverStatusInput, DeclinePoolInput } from './driver.schema.js';
 
 export class DriverController {
   constructor(private readonly driverService: DriverService) {}
@@ -51,6 +51,22 @@ export class DriverController {
       }
 
       res.status(200).json([]);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async declinePool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = req.user?.sub || req.user?.id;
+      if (!driverId) {
+        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
+      }
+
+      const poolId = req.params.id;
+      const input = req.body as DeclinePoolInput;
+      const response = await this.driverService.declinePool(driverId, poolId, input);
+      res.status(200).json(response);
     } catch (err) {
       next(err);
     }

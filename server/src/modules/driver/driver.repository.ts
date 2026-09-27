@@ -10,6 +10,7 @@ import {
   rideEvents,
   type User,
   type Vehicle,
+  type Pool,
 } from '../../db/schema/index.js';
 import type {
   DriverActivePool,
@@ -78,6 +79,32 @@ export class DriverRepository {
       .returning();
 
     return updatedVehicle ?? null;
+  }
+
+  async findPoolById(poolId: string): Promise<Pool | null> {
+    const [pool] = await this.dbClient
+      .select()
+      .from(pools)
+      .where(eq(pools.id, poolId))
+      .limit(1);
+
+    return pool ?? null;
+  }
+
+  async hasDriverDeclinedPool(driverId: string, poolId: string): Promise<boolean> {
+    const [row] = await this.dbClient
+      .select({ id: rideEvents.id })
+      .from(rideEvents)
+      .where(
+        and(
+          eq(rideEvents.actorId, driverId),
+          eq(rideEvents.poolId, poolId),
+          eq(rideEvents.event, 'DRIVER_DECLINED')
+        )
+      )
+      .limit(1);
+
+    return Boolean(row);
   }
 
   async findOpenPoolsForDriver(driverId: string, vehicleCapacity: number): Promise<OpenPoolItem[]> {

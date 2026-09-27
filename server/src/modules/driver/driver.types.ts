@@ -60,4 +60,7 @@ export interface OpenPoolItem {
   createdAt: Date;
 }
 
-
+export interface DeclinePoolResponse {
+  success: boolean;
+  poolId: string;
+}

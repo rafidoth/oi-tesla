@@ -7,6 +7,7 @@ export * from "./components/driver-dashboard-header";
 export * from "./components/driver-off-duty-banner";
 export * from "./components/open-pool-card";
 export * from "./components/open-pools-feed";
+export * from "./hooks/use-decline-pool-mutation";
 
 
 

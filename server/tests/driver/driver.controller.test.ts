@@ -11,6 +11,7 @@ describe('DriverController Unit Tests', () => {
     getDriverMe: ReturnType<typeof vi.fn>;
     updateDriverStatus: ReturnType<typeof vi.fn>;
     getOpenPoolsForDriver: ReturnType<typeof vi.fn>;
+    declinePool: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -21,6 +22,7 @@ describe('DriverController Unit Tests', () => {
       getDriverMe: vi.fn(),
       updateDriverStatus: vi.fn(),
       getOpenPoolsForDriver: vi.fn(),
+      declinePool: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -227,6 +229,75 @@ describe('DriverController Unit Tests', () => {
     } as unknown as AuthenticatedRequest;
 
     await controller.getDriverPools(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it('successfully declines a pool and returns 200', async () => {
+    const expectedData = {
+      success: true,
+      poolId: 'pool-uuid-1',
+    };
+    mockDriverService.declinePool.mockResolvedValue(expectedData);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      params: {
+        id: 'pool-uuid-1',
+      },
+      body: {
+        reason: 'Too far away',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.declinePool(req, res as Response, next);
+
+    expect(mockDriverService.declinePool).toHaveBeenCalledWith(
+      CAST.driver.id,
+      'pool-uuid-1',
+      { reason: 'Too far away' }
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expectedData);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('passes UnauthorizedError to next on declinePool if unauthenticated', async () => {
+    const req = {
+      params: {
+        id: 'pool-uuid-1',
+      },
+      body: {},
+    } as unknown as AuthenticatedRequest;
+
+    await controller.declinePool(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+  });
+
+  it('delegates service errors to next on declinePool', async () => {
+    const error = new Error('Pool decline failed');
+    mockDriverService.declinePool.mockRejectedValue(error);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      params: {
+        id: 'pool-uuid-1',
+      },
+      body: {},
+    } as unknown as AuthenticatedRequest;
+
+    await controller.declinePool(req, res as Response, next);
 
     expect(next).toHaveBeenCalledWith(error);
   });

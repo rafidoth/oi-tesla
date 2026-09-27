@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DriverService } from '../../src/modules/driver/driver.service.js';
 import type { DriverRepository } from '../../src/modules/driver/driver.repository.js';
 import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
+import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
+import type { EventsService } from '../../src/modules/events/events.service.js';
 import { CAST } from '../fixtures/cast.js';
 
 describe('DriverService Unit Tests', () => {
@@ -11,6 +13,11 @@ describe('DriverService Unit Tests', () => {
     findActivePoolByDriverId: ReturnType<typeof vi.fn>;
     updateVehicleStatus: ReturnType<typeof vi.fn>;
     findOpenPoolsForDriver: ReturnType<typeof vi.fn>;
+    findPoolById: ReturnType<typeof vi.fn>;
+    hasDriverDeclinedPool: ReturnType<typeof vi.fn>;
+  };
+  let mockEventsService: {
+    logRideEvent: ReturnType<typeof vi.fn>;
   };
   let driverService: DriverService;
 
@@ -21,8 +28,16 @@ describe('DriverService Unit Tests', () => {
       findActivePoolByDriverId: vi.fn(),
       updateVehicleStatus: vi.fn(),
       findOpenPoolsForDriver: vi.fn(),
+      findPoolById: vi.fn(),
+      hasDriverDeclinedPool: vi.fn(),
     };
-    driverService = new DriverService(mockDriverRepo as unknown as DriverRepository);
+    mockEventsService = {
+      logRideEvent: vi.fn().mockResolvedValue({} as any),
+    };
+    driverService = new DriverService(
+      mockDriverRepo as unknown as DriverRepository,
+      mockEventsService as unknown as EventsService
+    );
   });
 
   it('retrieves driver profile and vehicle overview without an active pool', async () => {
@@ -261,6 +276,140 @@ describe('DriverService Unit Tests', () => {
     mockDriverRepo.findVehicleByDriverId.mockResolvedValue(null);
 
     await expect(driverService.getOpenPoolsForDriver(CAST.driver.id)).rejects.toThrow(NotFoundError);
+  });
+
+  it('successfully declines an open pool and logs DRIVER_DECLINED event', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-uuid-1',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockDriverRepo.hasDriverDeclinedPool.mockResolvedValue(false);
+
+    const result = await driverService.declinePool(CAST.driver.id, 'pool-uuid-1', {
+      reason: 'Not heading in that direction',
+    });
+
+    expect(result).toEqual({
+      success: true,
+      poolId: 'pool-uuid-1',
+    });
+    expect(mockEventsService.logRideEvent).toHaveBeenCalledWith({
+      event: 'DRIVER_DECLINED',
+      actorType: 'DRIVER',
+      actorId: CAST.driver.id,
+      poolId: 'pool-uuid-1',
+      fromState: 'OPEN',
+      toState: 'OPEN',
+      payload: { reason: 'Not heading in that direction' },
+    });
+  });
+
+  it('idempotently handles decline if pool was already declined by driver', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-uuid-1',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockDriverRepo.hasDriverDeclinedPool.mockResolvedValue(true);
+
+    const result = await driverService.declinePool(CAST.driver.id, 'pool-uuid-1');
+
+    expect(result).toEqual({
+      success: true,
+      poolId: 'pool-uuid-1',
+    });
+    expect(mockEventsService.logRideEvent).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundError on declinePool when driver is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+    await expect(driverService.declinePool('unknown-id', 'pool-uuid-1')).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError on declinePool when pool is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findPoolById.mockResolvedValue(null);
+
+    await expect(driverService.declinePool(CAST.driver.id, 'unknown-pool')).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws InvalidTransitionError on declinePool when pool status is not OPEN', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-uuid-1',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'MATCHED',
+      driverId: 'other-driver',
+      vehicleId: 'other-vehicle',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.declinePool(CAST.driver.id, 'pool-uuid-1')).rejects.toThrow(
+      InvalidTransitionError
+    );
+  });
+
+  it('throws InvalidTransitionError on declinePool when pool already has an assigned driver', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-uuid-1',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: 'other-driver',
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.declinePool(CAST.driver.id, 'pool-uuid-1')).rejects.toThrow(
+      InvalidTransitionError
+    );
   });
 });
 

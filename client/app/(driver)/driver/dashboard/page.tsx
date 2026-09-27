@@ -5,6 +5,7 @@ import {
   useDriverMeQuery,
   useUpdateDriverStatusMutation,
   useOpenPoolsQuery,
+  useDeclinePoolMutation,
   DriverDashboardHeader,
   DriverOffDutyBanner,
   OpenPoolsFeed,
@@ -36,10 +37,16 @@ export default function DriverDashboardPage() {
     },
   });
 
+  const declinePoolMutation = useDeclinePoolMutation();
+
   const isOffline = data?.vehicle && data.vehicle.status === "OFFLINE";
 
   const handleToggleStatus = (nextStatus: "ONLINE" | "OFFLINE") => {
     updateStatusMutation.mutate({ status: nextStatus });
+  };
+
+  const handleDeclinePool = (poolId: string) => {
+    declinePoolMutation.mutate({ poolId });
   };
 
   return (
@@ -68,7 +75,13 @@ export default function DriverDashboardPage() {
           isFetching={isOpenPoolsFetching}
           isError={isOpenPoolsError}
           error={openPoolsError}
+          decliningPoolId={
+            declinePoolMutation.isPending
+              ? declinePoolMutation.variables?.poolId
+              : undefined
+          }
           onRefresh={() => refetchOpenPools()}
+          onDecline={handleDeclinePool}
         />
       )}
     </div>
