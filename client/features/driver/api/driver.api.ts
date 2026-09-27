@@ -4,6 +4,7 @@ import type {
   UpdateDriverStatusInput,
   UpdateDriverStatusResponse,
   OpenPoolItem,
+  AcceptPoolResponse,
 } from "../types/driver.types";
 
 export const driverApi = {
@@ -27,6 +28,13 @@ export const driverApi = {
   async getOpenPools(): Promise<OpenPoolItem[]> {
     const response = await apiClient.get<OpenPoolItem[]>(
       baseUrlWrapper("/driver/pools?status=OPEN")
+    );
+    return response.data;
+  },
+
+  async acceptPool(poolId: string): Promise<AcceptPoolResponse> {
+    const response = await apiClient.post<AcceptPoolResponse>(
+      baseUrlWrapper(`/driver/pools/${poolId}/accept`)
     );
     return response.data;
   },

@@ -43,8 +43,9 @@ export class DriverRepository {
     return vehicle ?? null;
   }
 
-  async findActivePoolByDriverId(driverId: string): Promise<DriverActivePool | null> {
-    const [row] = await this.dbClient
+  async findActivePoolByDriverId(driverId: string, tx?: any): Promise<DriverActivePool | null> {
+    const client = tx ?? this.dbClient;
+    const [row] = await client
       .select({
         id: pools.id,
         pickupLocationId: pools.pickupLocationId,
@@ -81,14 +82,69 @@ export class DriverRepository {
     return updatedVehicle ?? null;
   }
 
-  async findPoolById(poolId: string): Promise<Pool | null> {
-    const [pool] = await this.dbClient
+  async findPoolById(poolId: string, tx?: any): Promise<Pool | null> {
+    const client = tx ?? this.dbClient;
+    const [pool] = await client
       .select()
       .from(pools)
       .where(eq(pools.id, poolId))
       .limit(1);
 
     return pool ?? null;
+  }
+
+  async assignDriverToPool(
+    poolId: string,
+    driverId: string,
+    vehicleId: string,
+    vehicleCapacity: number,
+    tx?: any
+  ): Promise<Pool | null> {
+    const client = tx ?? this.dbClient;
+    const [updatedPool] = await client
+      .update(pools)
+      .set({
+        driverId,
+        vehicleId,
+        capacity: vehicleCapacity,
+        status: 'MATCHED',
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(pools.id, poolId),
+          eq(pools.status, 'OPEN'),
+          isNull(pools.driverId),
+          lte(pools.occupiedSeats, vehicleCapacity)
+        )
+      )
+      .returning();
+
+    return updatedPool ?? null;
+  }
+
+  async findActiveMembersByPoolId(
+    poolId: string,
+    tx?: any
+  ): Promise<Array<{ id: string; rideRequestId: string; passengerId: string }>> {
+    const client = tx ?? this.dbClient;
+    return client
+      .select({
+        id: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+      })
+      .from(passengerRides)
+      .where(
+        and(
+          eq(passengerRides.poolId, poolId),
+          isNull(passengerRides.cancelledAt)
+        )
+      );
+  }
+
+  async withTransaction<T>(work: (tx: any) => Promise<T>): Promise<T> {
+    return this.dbClient.transaction(work);
   }
 
   async hasDriverDeclinedPool(driverId: string, poolId: string): Promise<boolean> {

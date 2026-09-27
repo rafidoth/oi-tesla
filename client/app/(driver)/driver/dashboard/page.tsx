@@ -6,6 +6,7 @@ import {
   useUpdateDriverStatusMutation,
   useOpenPoolsQuery,
   useDeclinePoolMutation,
+  useAcceptPoolMutation,
   DriverDashboardHeader,
   DriverOffDutyBanner,
   OpenPoolsFeed,
@@ -39,6 +40,29 @@ export default function DriverDashboardPage() {
 
   const declinePoolMutation = useDeclinePoolMutation();
 
+  const [acceptError, setAcceptError] = React.useState<string | null>(null);
+
+  const acceptPoolMutation = useAcceptPoolMutation({
+    onMutate: () => {
+      setAcceptError(null);
+    },
+    onSuccess: () => {
+      setAcceptError(null);
+      refetch();
+    },
+    onError: (err) => {
+      const axiosError = err as {
+        response?: { data?: { error?: { message?: string } } };
+        message?: string;
+      };
+      setAcceptError(
+        axiosError.response?.data?.error?.message ||
+        axiosError.message ||
+        "Failed to accept pool"
+      );
+    },
+  });
+
   const isOffline = data?.vehicle && data.vehicle.status === "OFFLINE";
 
   const handleToggleStatus = (nextStatus: "ONLINE" | "OFFLINE") => {
@@ -47,6 +71,10 @@ export default function DriverDashboardPage() {
 
   const handleDeclinePool = (poolId: string) => {
     declinePoolMutation.mutate({ poolId });
+  };
+
+  const handleAcceptPool = (poolId: string) => {
+    acceptPoolMutation.mutate({ poolId });
   };
 
   return (
@@ -75,12 +103,20 @@ export default function DriverDashboardPage() {
           isFetching={isOpenPoolsFetching}
           isError={isOpenPoolsError}
           error={openPoolsError}
+          acceptingPoolId={
+            acceptPoolMutation.isPending
+              ? acceptPoolMutation.variables?.poolId
+              : undefined
+          }
           decliningPoolId={
             declinePoolMutation.isPending
               ? declinePoolMutation.variables?.poolId
               : undefined
           }
+          acceptError={acceptError}
+          onClearAcceptError={() => setAcceptError(null)}
           onRefresh={() => refetchOpenPools()}
+          onAccept={handleAcceptPool}
           onDecline={handleDeclinePool}
         />
       )}

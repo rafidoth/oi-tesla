@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SeatMeter } from "@/components/custom/seat-meter";
 import type { OpenPoolItem } from "../types/driver.types";
@@ -92,9 +92,10 @@ export function OpenPoolCard({
                 type="button"
                 disabled={isActionDisabled}
                 onClick={() => onAccept(pool.id)}
-                className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold bg-black text-white hover:bg-black/90 transition-all disabled:opacity-50 shadow-xs cursor-pointer"
+                className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold bg-black text-white hover:bg-black/90 transition-all disabled:opacity-50 shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
               >
-                Accept
+                {isAccepting && <Loader2 className="size-3.5 animate-spin" />}
+                <span>{isAccepting ? "Accepting..." : "Accept"}</span>
               </button>
             )}
           </div>

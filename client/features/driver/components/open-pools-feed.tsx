@@ -14,7 +14,10 @@ interface OpenPoolsFeedProps {
   isFetching?: boolean;
   isError?: boolean;
   error?: Error | null;
+  acceptingPoolId?: string | null;
   decliningPoolId?: string | null;
+  acceptError?: string | null;
+  onClearAcceptError?: () => void;
   onRefresh?: () => void;
   onAccept?: (poolId: string) => void;
   onDecline?: (poolId: string) => void;
@@ -26,7 +29,10 @@ export function OpenPoolsFeed({
   isFetching = false,
   isError = false,
   error,
+  acceptingPoolId,
   decliningPoolId,
+  acceptError,
+  onClearAcceptError,
   onRefresh,
   onAccept,
   onDecline,
@@ -60,6 +66,27 @@ export function OpenPoolsFeed({
           </Button>
         )}
       </div>
+
+      {acceptError && (
+        <Card className="border-error/20 bg-error-surface p-4 text-error flex items-start justify-between gap-3 shadow-xs">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-bold">Acceptance Failed</h4>
+              <p className="text-xs text-error/90 mt-0.5">{acceptError}</p>
+            </div>
+          </div>
+          {onClearAcceptError && (
+            <button
+              type="button"
+              onClick={onClearAcceptError}
+              className="text-xs text-error hover:underline cursor-pointer shrink-0 font-medium"
+            >
+              Dismiss
+            </button>
+          )}
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -131,6 +158,7 @@ export function OpenPoolsFeed({
               pool={pool}
               onAccept={onAccept}
               onDecline={onDecline}
+              isAccepting={acceptingPoolId === pool.id}
               isDeclining={decliningPoolId === pool.id}
             />
           ))}

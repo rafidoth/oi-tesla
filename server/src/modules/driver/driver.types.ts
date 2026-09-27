@@ -64,3 +64,18 @@ export interface DeclinePoolResponse {
   success: boolean;
   poolId: string;
 }
+
+export interface AcceptPoolResponse {
+  success: boolean;
+  pool: {
+    id: string;
+    pickupLocationId: number;
+    status: string;
+    capacity: number;
+    occupiedSeats: number;
+    driverId: string;
+    vehicleId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}

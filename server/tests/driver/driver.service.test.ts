@@ -3,6 +3,7 @@ import { DriverService } from '../../src/modules/driver/driver.service.js';
 import type { DriverRepository } from '../../src/modules/driver/driver.repository.js';
 import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
 import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
+import { ConflictError } from '../../src/shared/errors/ConflictError.js';
 import type { EventsService } from '../../src/modules/events/events.service.js';
 import { CAST } from '../fixtures/cast.js';
 
@@ -15,6 +16,9 @@ describe('DriverService Unit Tests', () => {
     findOpenPoolsForDriver: ReturnType<typeof vi.fn>;
     findPoolById: ReturnType<typeof vi.fn>;
     hasDriverDeclinedPool: ReturnType<typeof vi.fn>;
+    assignDriverToPool: ReturnType<typeof vi.fn>;
+    findActiveMembersByPoolId: ReturnType<typeof vi.fn>;
+    withTransaction: ReturnType<typeof vi.fn>;
   };
   let mockEventsService: {
     logRideEvent: ReturnType<typeof vi.fn>;
@@ -30,6 +34,9 @@ describe('DriverService Unit Tests', () => {
       findOpenPoolsForDriver: vi.fn(),
       findPoolById: vi.fn(),
       hasDriverDeclinedPool: vi.fn(),
+      assignDriverToPool: vi.fn(),
+      findActiveMembersByPoolId: vi.fn(),
+      withTransaction: vi.fn((callback) => callback({})),
     };
     mockEventsService = {
       logRideEvent: vi.fn().mockResolvedValue({} as any),
@@ -409,6 +416,372 @@ describe('DriverService Unit Tests', () => {
 
     await expect(driverService.declinePool(CAST.driver.id, 'pool-uuid-1')).rejects.toThrow(
       InvalidTransitionError
+    );
+  });
+
+  it('throws NotFoundError on acceptPool when driver is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      NotFoundError
+    );
+  });
+
+  it('throws NotFoundError on acceptPool when vehicle is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue(null);
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      NotFoundError
+    );
+  });
+
+  it('throws ConflictError(DRIVER_OFFLINE) on acceptPool when driver vehicle is offline', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'OFFLINE',
+    });
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('DRIVER_OFFLINE', 'Driver must be online to accept a pool')
+    );
+  });
+
+  it('throws ConflictError(DRIVER_HAS_ACTIVE_POOL) on acceptPool when driver already has an active pool', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue({
+      id: 'active-pool-1',
+      pickupLocationId: 1,
+      pickupLocationName: 'Airport',
+      status: 'MATCHED',
+      capacity: 3,
+      occupiedSeats: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('DRIVER_HAS_ACTIVE_POOL', 'Driver already has an active pool in progress')
+    );
+  });
+
+  it('throws NotFoundError on acceptPool when pool is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue(null);
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      NotFoundError
+    );
+  });
+
+  it('throws ConflictError(POOL_ALREADY_ASSIGNED) on acceptPool when pool is not in OPEN status', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'MATCHED',
+      driverId: 'other-driver',
+      vehicleId: 'other-vehicle',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('POOL_ALREADY_ASSIGNED', 'Pool is already assigned or no longer available')
+    );
+  });
+
+  it('throws ConflictError(POOL_ALREADY_ASSIGNED) on acceptPool when pool already has a driver assigned', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: 'other-driver',
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('POOL_ALREADY_ASSIGNED', 'Pool is already assigned or no longer available')
+    );
+  });
+
+  it('throws ConflictError(VEHICLE_TOO_SMALL) on acceptPool when vehicle capacity is less than occupied seats', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 2,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 3,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      ConflictError
+    );
+  });
+
+  it('successfully accepts pool, assigns driver and vehicle, sets status to MATCHED, and logs audit events', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    const initialPool = {
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date('2026-09-27T10:00:00Z'),
+      updatedAt: new Date('2026-09-27T10:00:00Z'),
+    };
+    mockDriverRepo.findPoolById.mockResolvedValue(initialPool);
+
+    const updatedPool = {
+      ...initialPool,
+      driverId: CAST.driver.id,
+      vehicleId: CAST.driver.vehicle.id,
+      capacity: 3,
+      status: 'MATCHED',
+      updatedAt: new Date('2026-09-27T10:05:00Z'),
+    };
+    mockDriverRepo.assignDriverToPool.mockResolvedValue(updatedPool);
+    mockDriverRepo.findActiveMembersByPoolId.mockResolvedValue([
+      {
+        id: 'ride-1',
+        rideRequestId: 'req-1',
+        passengerId: 'passenger-1',
+      },
+      {
+        id: 'ride-2',
+        rideRequestId: 'req-2',
+        passengerId: 'passenger-2',
+      },
+    ]);
+
+    const result = await driverService.acceptPool(CAST.driver.id, 'pool-123');
+
+    expect(result.success).toBe(true);
+    expect(result.pool.status).toBe('MATCHED');
+    expect(result.pool.driverId).toBe(CAST.driver.id);
+    expect(result.pool.vehicleId).toBe(CAST.driver.vehicle.id);
+    expect(result.pool.capacity).toBe(3);
+
+    expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'DRIVER_ACCEPTED',
+        actorType: 'DRIVER',
+        actorId: CAST.driver.id,
+        poolId: 'pool-123',
+        fromState: 'OPEN',
+        toState: 'MATCHED',
+      }),
+      expect.anything()
+    );
+
+    expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'RIDE_MATCHED',
+        actorType: 'SYSTEM',
+        actorId: 'passenger-1',
+        poolId: 'pool-123',
+        passengerRideId: 'ride-1',
+        rideRequestId: 'req-1',
+        fromState: 'REQUESTED',
+        toState: 'MATCHED',
+      }),
+      expect.anything()
+    );
+
+    expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'RIDE_MATCHED',
+        actorType: 'SYSTEM',
+        actorId: 'passenger-2',
+        poolId: 'pool-123',
+        passengerRideId: 'ride-2',
+        rideRequestId: 'req-2',
+        fromState: 'REQUESTED',
+        toState: 'MATCHED',
+      }),
+      expect.anything()
+    );
+  });
+
+  it('throws ConflictError(POOL_ALREADY_ASSIGNED) when atomic assignment returns null due to race condition', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    mockDriverRepo.assignDriverToPool.mockResolvedValue(null);
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('POOL_ALREADY_ASSIGNED', 'Pool is already assigned or no longer available')
+    );
+  });
+
+  it('translates database unique constraint violation on active pool to ConflictError(DRIVER_HAS_ACTIVE_POOL)', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.findVehicleByDriverId.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: 3,
+      status: 'ONLINE',
+    });
+    mockDriverRepo.findActivePoolByDriverId.mockResolvedValue(null);
+    mockDriverRepo.findPoolById.mockResolvedValue({
+      id: 'pool-123',
+      pickupLocationId: 1,
+      capacity: 3,
+      occupiedSeats: 2,
+      status: 'OPEN',
+      driverId: null,
+      vehicleId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    const dbError = new Error('duplicate key value violates unique constraint "pools_driver_active_unique_idx"');
+    (dbError as any).code = '23505';
+    mockDriverRepo.assignDriverToPool.mockRejectedValue(dbError);
+
+    await expect(driverService.acceptPool(CAST.driver.id, 'pool-123')).rejects.toThrow(
+      new ConflictError('DRIVER_HAS_ACTIVE_POOL', 'Driver already has an active pool in progress')
     );
   });
 });

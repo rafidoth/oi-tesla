@@ -71,6 +71,21 @@ export class DriverController {
       next(err);
     }
   }
+
+  async acceptPool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = req.user?.sub || req.user?.id;
+      if (!driverId) {
+        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
+      }
+
+      const poolId = req.params.id;
+      const response = await this.driverService.acceptPool(driverId, poolId);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export default DriverController;
