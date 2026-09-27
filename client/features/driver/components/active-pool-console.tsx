@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, AlertCircle } from "lucide-react";
+import { RefreshCw, AlertCircle, Lock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
@@ -49,6 +49,7 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
             <CapacityMeter
               capacity={pool.capacity}
               occupiedSeats={pool.occupiedSeats}
+              isStarted={pool.status === "STARTED" || pool.status === "COMPLETED"}
             />
             <PoolLifecycleActions poolId={pool.id} status={pool.status} />
           </Card>
@@ -56,7 +57,10 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
 
         <div className="lg:col-span-7">
           <Card className="p-6 space-y-5">
-            <RosterSection roster={pool.roster} />
+            <RosterSection
+              roster={pool.roster}
+              isStarted={pool.status === "STARTED" || pool.status === "COMPLETED"}
+            />
           </Card>
         </div>
       </div>
@@ -156,9 +160,11 @@ function RouteStopItem({
 function CapacityMeter({
   capacity,
   occupiedSeats,
+  isStarted,
 }: {
   capacity: number;
   occupiedSeats: number;
+  isStarted?: boolean;
 }) {
   const remainingSeats = Math.max(0, capacity - occupiedSeats);
 
@@ -172,15 +178,28 @@ function CapacityMeter({
       </div>
       <SeatMeter occupiedSeats={occupiedSeats} capacity={capacity} size="default" />
       <div className="text-[11px] text-ink-secondary pt-0.5">
-        {remainingSeats > 0
-          ? `${remainingSeats} seat${remainingSeats === 1 ? "" : "s"} remaining for pooling`
-          : "Vehicle full"}
+        {isStarted ? (
+          <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
+            <Lock className="size-3 text-ink-secondary shrink-0" />
+            Membership locked · Trip in progress
+          </span>
+        ) : remainingSeats > 0 ? (
+          `${remainingSeats} seat${remainingSeats === 1 ? "" : "s"} remaining for pooling`
+        ) : (
+          "Vehicle full"
+        )}
       </div>
     </div>
   );
 }
 
-function RosterSection({ roster }: { roster: DriverPoolRosterMember[] }) {
+function RosterSection({
+  roster,
+  isStarted,
+}: {
+  roster: DriverPoolRosterMember[];
+  isStarted?: boolean;
+}) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
@@ -192,8 +211,15 @@ function RosterSection({ roster }: { roster: DriverPoolRosterMember[] }) {
         </span>
       </div>
 
+      {isStarted && (
+        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-subtle border border-border/80 text-xs text-ink-secondary">
+          <Lock className="size-3.5 text-ink shrink-0" />
+          <span>Fares permanently locked · Trip in motion</span>
+        </div>
+      )}
+
       <RosterList roster={roster} />
-      <PoolValueFooter roster={roster} />
+      <PoolValueFooter roster={roster} isStarted={isStarted} />
     </div>
   );
 }
@@ -288,14 +314,28 @@ function RosterFareInfo({
   );
 }
 
-function PoolValueFooter({ roster }: { roster: DriverPoolRosterMember[] }) {
+function PoolValueFooter({
+  roster,
+  isStarted,
+}: {
+  roster: DriverPoolRosterMember[];
+  isStarted?: boolean;
+}) {
   const totalPaisa = roster.reduce((sum, item) => sum + item.farePaisa, 0);
 
   return (
     <div className="pt-3 border-t border-border/60 flex items-center justify-between">
-      <span className="text-xs font-semibold text-ink-secondary">
-        Total Projected Value
-      </span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-semibold text-ink-secondary">
+          {isStarted ? "Final Pool Value" : "Total Projected Value"}
+        </span>
+        {isStarted && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface border border-border text-ink-secondary">
+            <Lock className="size-2.5" />
+            Locked
+          </span>
+        )}
+      </div>
       <FareDisplay paisa={totalPaisa} size="sm" align="right" />
     </div>
   );

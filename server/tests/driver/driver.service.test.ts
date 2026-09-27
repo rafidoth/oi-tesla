@@ -975,12 +975,20 @@ describe('DriverService Unit Tests', () => {
       );
     });
 
-    it('successfully executes start transition on DRIVER_ARRIVED pool', async () => {
+    it('successfully executes start transition on DRIVER_ARRIVED pool and logs audit events', async () => {
       mockDriverRepo.findPoolById.mockResolvedValue({
         id: poolId,
         driverId,
         status: 'DRIVER_ARRIVED',
       });
+      mockDriverRepo.findActiveMembersByPoolId.mockResolvedValue([
+        {
+          id: 'member-ride-1',
+          rideRequestId: 'req-1',
+          passengerId: 'p-1',
+          farePaisa: 15000,
+        },
+      ]);
 
       const response = await driverService.startPool(driverId, poolId);
 
@@ -989,7 +997,38 @@ describe('DriverService Unit Tests', () => {
         poolId,
         status: 'STARTED',
       });
-      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'STARTED');
+      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'STARTED', expect.anything());
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        {
+          event: 'RIDE_STARTED',
+          actorType: 'DRIVER',
+          actorId: driverId,
+          poolId,
+          fromState: 'DRIVER_ARRIVED',
+          toState: 'STARTED',
+          payload: {
+            startedAt: expect.any(String),
+            memberCount: 1,
+          },
+        },
+        expect.anything()
+      );
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        {
+          event: 'RIDE_STARTED',
+          actorType: 'SYSTEM',
+          actorId: 'p-1',
+          poolId,
+          passengerRideId: 'member-ride-1',
+          rideRequestId: 'req-1',
+          fromState: 'DRIVER_ARRIVED',
+          toState: 'STARTED',
+          payload: {
+            farePaisa: 15000,
+          },
+        },
+        expect.anything()
+      );
     });
 
     it('successfully executes complete transition on STARTED pool', async () => {
@@ -1014,6 +1053,30 @@ describe('DriverService Unit Tests', () => {
         id: poolId,
         driverId,
         status: 'MATCHED',
+      });
+
+      await expect(driverService.startPool(driverId, poolId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('rejects start transition with ForbiddenError if calling driver is not pool owner', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId: 'another-driver',
+        status: 'DRIVER_ARRIVED',
+      });
+
+      await expect(driverService.startPool(driverId, poolId)).rejects.toThrow(
+        ForbiddenError
+      );
+    });
+
+    it('rejects start transition if pool is already in STARTED state', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'STARTED',
       });
 
       await expect(driverService.startPool(driverId, poolId)).rejects.toThrow(

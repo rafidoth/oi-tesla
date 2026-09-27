@@ -47,6 +47,7 @@ export function ActiveRideCard({ ride, className }: ActiveRideCardProps) {
             farePaisa={ride.farePaisa}
             originalEstimateFarePaisa={ride.originalEstimateFarePaisa}
             paymentMethod={ride.paymentMethod}
+            status={ride.status}
           />
 
           <RideActions

@@ -255,13 +255,14 @@ export class DriverRepository {
   async findActiveMembersByPoolId(
     poolId: string,
     tx?: any
-  ): Promise<Array<{ id: string; rideRequestId: string; passengerId: string }>> {
+  ): Promise<Array<{ id: string; rideRequestId: string; passengerId: string; farePaisa: number | null }>> {
     const client = tx ?? this.dbClient;
     return client
       .select({
         id: passengerRides.id,
         rideRequestId: passengerRides.rideRequestId,
         passengerId: passengerRides.passengerId,
+        farePaisa: passengerRides.farePaisa,
       })
       .from(passengerRides)
       .where(

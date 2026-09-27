@@ -38,7 +38,7 @@ export function RideActions({
       ) : (
         <div className="flex items-center gap-1.5 text-xs text-ink-secondary bg-surface px-2.5 py-1 rounded-md border border-border">
           <Lock className="size-3 text-ink-secondary" />
-          <span>Driver arrived</span>
+          <span>{status === "STARTED" ? "Trip in motion" : "Driver arrived"}</span>
         </div>
       )}
     </div>

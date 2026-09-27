@@ -10,6 +10,7 @@ import type { EventsService } from '../events/events.service.js';
 import { ConflictError } from '../../shared/errors/ConflictError.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
 import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
+import { InvalidTransitionError } from '../../shared/errors/InvalidTransitionError.js';
 import {
   PoolStateMachine,
   type PoolStatus,
@@ -138,7 +139,7 @@ export class PoolsService {
    * Updates passenger_rides in the database and logs a FARE_RECALCULATED event.
    */
   async recalculatePoolFares(poolId: string, tx?: any): Promise<Map<string, number>> {
-    // 1. activeMembers = await poolsRepo.findActiveMembersWithLegLocations(poolId, tx)
+    await this.assertFaresNotFrozen(poolId, tx);
     const activeMembers = await this.poolsRepo.findActiveMembersWithLegLocations(poolId, tx);
 
     // 2. If empty, return new Map()
@@ -228,6 +229,19 @@ export class PoolsService {
   ): void {
     if (actor.role === 'DRIVER' && (!poolDriverId || poolDriverId !== actor.id)) {
       throw new ForbiddenError('Driver is not assigned to this pool');
+    }
+  }
+
+  private async assertFaresNotFrozen(poolId: string, tx?: any): Promise<void> {
+    if (typeof this.poolsRepo.findPoolById !== 'function') {
+      return;
+    }
+    const pool = await this.poolsRepo.findPoolById(poolId, tx);
+    if (pool && ['STARTED', 'COMPLETED', 'CANCELLED'].includes(pool.status)) {
+      throw new InvalidTransitionError(
+        'FARES_FROZEN',
+        'Fares are permanently frozen once trip has started'
+      );
     }
   }
 }

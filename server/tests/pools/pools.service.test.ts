@@ -435,6 +435,28 @@ describe('PoolsService Unit Tests', () => {
       expect(mockEventsService.logRideEvent).not.toHaveBeenCalled();
     });
 
+    it('rejects fare recalculation if pool is in STARTED status', async () => {
+      mockPoolsRepo = {
+        findPoolById: vi.fn().mockResolvedValue({
+          id: 'pool-started-1',
+          status: 'STARTED',
+        } as any),
+        findActiveMembersWithLegLocations: vi.fn(),
+      };
+
+      poolsService = new PoolsService(
+        mockPoolsRepo as PoolsRepository,
+        mockLocationsRepo as LocationsRepository,
+        undefined,
+        mockLocationsService as unknown as LocationsService,
+        mockEventsService as unknown as EventsService
+      );
+
+      await expect(
+        poolsService.recalculatePoolFares('pool-started-1')
+      ).rejects.toThrow(InvalidTransitionError);
+    });
+
     it('calculates solo fare for single member and persists update and event', async () => {
       const activeMembers = [
         {

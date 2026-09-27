@@ -214,14 +214,24 @@ export class DriverService {
     return await this.driverRepo.withTransaction(async (tx) => {
       const pool = await this.findAndValidateDriverPool(poolId, driverId, tx);
       this.assertPoolIsMatched(pool.status);
-      await this.executePoolTransition(poolId, 'arrive', driverId, tx);
+      await this.executePoolTransition(poolId, 'arrive', driverId, tx, pool.status as PoolStatus);
       await this.recordArrivalAuditEvent(tx, poolId, driverId);
       return { success: true, poolId, status: 'DRIVER_ARRIVED' };
     });
   }
 
-  async startPool(driverId: string, poolId: string) {
-    return this.transitionPoolLifecycle(driverId, poolId, 'start');
+  async startPool(
+    driverId: string,
+    poolId: string
+  ): Promise<{ success: boolean; poolId: string; status: PoolStatus }> {
+    await this.assertDriverExists(driverId);
+    return await this.driverRepo.withTransaction(async (tx) => {
+      const pool = await this.findAndValidateDriverPool(poolId, driverId, tx);
+      this.assertPoolIsDriverArrived(pool.status);
+      await this.executePoolTransition(poolId, 'start', driverId, tx, pool.status as PoolStatus);
+      await this.recordStartAuditEvents(tx, pool, driverId);
+      return { success: true, poolId, status: 'STARTED' };
+    });
   }
 
   async completePool(driverId: string, poolId: string) {
@@ -256,16 +266,93 @@ export class DriverService {
     }
   }
 
+  private assertPoolIsDriverArrived(status: string): void {
+    if (status !== 'DRIVER_ARRIVED') {
+      throw new InvalidTransitionError(
+        'INVALID_STATE_TRANSITION',
+        `Cannot start trip when pool is in status ${status}`
+      );
+    }
+  }
+
   private async executePoolTransition(
     poolId: string,
     action: PoolAction,
     driverId: string,
-    tx: any
+    tx: any,
+    currentStatus?: PoolStatus
   ): Promise<void> {
     if (this.poolsService) {
       await this.poolsService.transitionPool(poolId, action, { id: driverId, role: 'DRIVER' }, tx);
-    } else {
-      await this.driverRepo.updatePoolStatus(poolId, 'DRIVER_ARRIVED', tx);
+      return;
+    }
+    const nextStatus = currentStatus
+      ? PoolStateMachine.getNextStatus(currentStatus, action, 'DRIVER')
+      : this.resolveDefaultNextStatus(action);
+    await this.driverRepo.updatePoolStatus(poolId, nextStatus, tx);
+  }
+
+  private resolveDefaultNextStatus(action: PoolAction): PoolStatus {
+    if (action === 'arrive') return 'DRIVER_ARRIVED';
+    if (action === 'start') return 'STARTED';
+    return 'COMPLETED';
+  }
+
+  private async recordStartAuditEvents(
+    tx: any,
+    pool: Pool,
+    driverId: string
+  ): Promise<void> {
+    const activeMembers = (await this.driverRepo.findActiveMembersByPoolId(pool.id, tx)) || [];
+    await this.logPoolStartEvent(tx, pool.id, driverId, activeMembers);
+    await this.logMemberStartEvents(tx, pool.id, activeMembers);
+  }
+
+  private async logPoolStartEvent(
+    tx: any,
+    poolId: string,
+    driverId: string,
+    members: Array<{ id: string; rideRequestId: string; passengerId: string; farePaisa?: number | null }>
+  ): Promise<void> {
+    await this.eventsService.logRideEvent(
+      {
+        event: 'RIDE_STARTED',
+        actorType: 'DRIVER',
+        actorId: driverId,
+        poolId,
+        fromState: 'DRIVER_ARRIVED',
+        toState: 'STARTED',
+        payload: {
+          startedAt: new Date().toISOString(),
+          memberCount: members.length,
+        },
+      },
+      tx
+    );
+  }
+
+  private async logMemberStartEvents(
+    tx: any,
+    poolId: string,
+    members: Array<{ id: string; rideRequestId: string; passengerId: string; farePaisa?: number | null }>
+  ): Promise<void> {
+    for (const member of members) {
+      await this.eventsService.logRideEvent(
+        {
+          event: 'RIDE_STARTED',
+          actorType: 'SYSTEM',
+          actorId: member.passengerId,
+          poolId,
+          passengerRideId: member.id,
+          rideRequestId: member.rideRequestId,
+          fromState: 'DRIVER_ARRIVED',
+          toState: 'STARTED',
+          payload: {
+            farePaisa: member.farePaisa ?? null,
+          },
+        },
+        tx
+      );
     }
   }
 
