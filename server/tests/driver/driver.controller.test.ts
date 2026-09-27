@@ -9,6 +9,7 @@ import { CAST } from '../fixtures/cast.js';
 describe('DriverController Unit Tests', () => {
   let mockDriverService: {
     getDriverMe: ReturnType<typeof vi.fn>;
+    updateDriverStatus: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -17,6 +18,7 @@ describe('DriverController Unit Tests', () => {
   beforeEach(() => {
     mockDriverService = {
       getDriverMe: vi.fn(),
+      updateDriverStatus: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -88,4 +90,71 @@ describe('DriverController Unit Tests', () => {
 
     expect(next).toHaveBeenCalledWith(error);
   });
+
+  it('successfully updates driver status and returns 200', async () => {
+    const expectedData = {
+      status: 'ONLINE' as const,
+      vehicle: {
+        id: CAST.driver.vehicle.id,
+        name: CAST.driver.vehicle.name,
+        regNo: CAST.driver.vehicle.regNo,
+        capacity: 3,
+        status: 'ONLINE' as const,
+      },
+    };
+    mockDriverService.updateDriverStatus.mockResolvedValue(expectedData);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      body: {
+        status: 'ONLINE',
+      },
+    } as AuthenticatedRequest;
+
+    await controller.updateDriverStatus(req, res as Response, next);
+
+    expect(mockDriverService.updateDriverStatus).toHaveBeenCalledWith(CAST.driver.id, 'ONLINE');
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expectedData);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('passes UnauthorizedError to next on updateDriverStatus if unauthenticated', async () => {
+    const req = {
+      body: {
+        status: 'ONLINE',
+      },
+    } as AuthenticatedRequest;
+
+    await controller.updateDriverStatus(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+  });
+
+  it('delegates service errors to next on updateDriverStatus', async () => {
+    const error = new Error('Database error');
+    mockDriverService.updateDriverStatus.mockRejectedValue(error);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      body: {
+        status: 'OFFLINE',
+      },
+    } as AuthenticatedRequest;
+
+    await controller.updateDriverStatus(req, res as Response, next);
+
+    expect(next).toHaveBeenCalledWith(error);
+  });
 });
+

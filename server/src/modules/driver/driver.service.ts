@@ -1,6 +1,6 @@
 import { DriverRepository } from './driver.repository.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
-import type { DriverMeResponse } from './driver.types.js';
+import type { DriverMeResponse, UpdateDriverStatusResponse } from './driver.types.js';
 
 export class DriverService {
   constructor(private readonly driverRepo: DriverRepository) {}
@@ -46,6 +46,33 @@ export class DriverService {
         : null,
     };
   }
+
+  async updateDriverStatus(
+    driverId: string,
+    status: 'ONLINE' | 'OFFLINE'
+  ): Promise<UpdateDriverStatusResponse> {
+    const driver = await this.driverRepo.findDriverById(driverId);
+    if (!driver) {
+      throw new NotFoundError('Driver profile not found');
+    }
+
+    const updatedVehicle = await this.driverRepo.updateVehicleStatus(driverId, status);
+    if (!updatedVehicle) {
+      throw new NotFoundError('No vehicle assigned to driver');
+    }
+
+    return {
+      status: updatedVehicle.status as 'ONLINE' | 'OFFLINE',
+      vehicle: {
+        id: updatedVehicle.id,
+        name: updatedVehicle.name,
+        regNo: updatedVehicle.regNo,
+        capacity: updatedVehicle.capacity,
+        status: updatedVehicle.status as 'ONLINE' | 'OFFLINE',
+      },
+    };
+  }
 }
 
 export default DriverService;
+

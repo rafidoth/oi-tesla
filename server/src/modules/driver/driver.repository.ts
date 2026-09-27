@@ -50,6 +50,19 @@ export class DriverRepository {
 
     return row ?? null;
   }
+
+  async updateVehicleStatus(driverId: string, status: 'ONLINE' | 'OFFLINE'): Promise<Vehicle | null> {
+    const [updatedVehicle] = await this.dbClient
+      .update(vehicles)
+      .set({
+        status,
+        updatedAt: new Date(),
+      })
+      .where(eq(vehicles.driverId, driverId))
+      .returning();
+
+    return updatedVehicle ?? null;
+  }
 }
 
 export default DriverRepository;

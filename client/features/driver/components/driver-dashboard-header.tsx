@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type RideStatus } from "@/components/custom/status-badge";
+import { ToggleOnline } from "@/components/custom/toggle-online";
 import type { DriverMeResponse } from "../types/driver.types";
 
 interface DriverDashboardHeaderProps {
@@ -14,6 +15,8 @@ interface DriverDashboardHeaderProps {
   isError: boolean;
   error?: Error | null;
   onRetry?: () => void;
+  onToggleStatus?: (nextStatus: "ONLINE" | "OFFLINE") => void;
+  isUpdatingStatus?: boolean;
 }
 
 export function DriverDashboardHeader({
@@ -22,10 +25,12 @@ export function DriverDashboardHeader({
   isError,
   error,
   onRetry,
+  onToggleStatus,
+  isUpdatingStatus = false,
 }: DriverDashboardHeaderProps) {
   if (isLoading) {
     return (
-      <Card className="border-border bg-card p-5 space-y-4 shadow-xs">
+      <Card className="p-5 space-y-4 ">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -35,9 +40,15 @@ export function DriverDashboardHeader({
             <Skeleton className="h-7 w-44 rounded-sm" animate />
             <Skeleton className="h-4 w-32 rounded-xs" animate />
           </div>
-          <div className="sm:border-l sm:border-border/60 sm:pl-5 space-y-1.5">
-            <Skeleton className="h-3 w-20 rounded-xs" animate />
-            <Skeleton className="h-5 w-24 rounded-sm" animate />
+          <div className="flex items-center gap-6 sm:border-l sm:border-border/60 sm:pl-6">
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-16 rounded-xs" animate />
+              <Skeleton className="h-6 w-12 rounded-full" animate />
+            </div>
+            <div className="border-l border-border/40 pl-6 space-y-1.5">
+              <Skeleton className="h-3 w-20 rounded-xs" animate />
+              <Skeleton className="h-5 w-24 rounded-sm" animate />
+            </div>
           </div>
         </div>
       </Card>
@@ -75,7 +86,7 @@ export function DriverDashboardHeader({
   const isOnline = vehicle.status === "ONLINE";
 
   return (
-    <Card className="border-border bg-card p-5 shadow-xs">
+    <Card className="p-5 border-none ">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Left: Driver and Vehicle Details */}
         <div className="space-y-1">
@@ -110,9 +121,26 @@ export function DriverDashboardHeader({
           </div>
         </div>
 
-        {/* Right: Seating Capacity */}
-        <div className="flex items-center gap-4 sm:border-l sm:border-border/60 sm:pl-5">
-          <div className="text-left sm:text-right">
+        <div className="flex items-center gap-6 sm:border-l sm:border-border/60 sm:pl-6">
+          {onToggleStatus && (
+            <div className="flex flex-col items-start sm:items-end gap-1">
+              <span className="text-xs text-ink-secondary font-medium">Availability</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-ink">
+                  {isOnline ? "Available" : "Off Duty"}
+                </span>
+                <ToggleOnline
+                  online={isOnline}
+                  onToggle={(nextState) =>
+                    onToggleStatus(nextState ? "ONLINE" : "OFFLINE")
+                  }
+                  disabled={isUpdatingStatus}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="border-l border-border/40 pl-6 text-left sm:text-right">
             <div className="text-xs text-ink-secondary font-medium">Physical Capacity</div>
             <div className="text-base font-bold text-ink flex items-center sm:justify-end gap-1.5 mt-0.5">
               <div className="flex gap-1" aria-label={`${vehicle.capacity} seats`}>

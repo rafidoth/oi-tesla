@@ -9,6 +9,7 @@ describe('DriverService Unit Tests', () => {
     findDriverById: ReturnType<typeof vi.fn>;
     findVehicleByDriverId: ReturnType<typeof vi.fn>;
     findActivePoolByDriverId: ReturnType<typeof vi.fn>;
+    updateVehicleStatus: ReturnType<typeof vi.fn>;
   };
   let driverService: DriverService;
 
@@ -17,6 +18,7 @@ describe('DriverService Unit Tests', () => {
       findDriverById: vi.fn(),
       findVehicleByDriverId: vi.fn(),
       findActivePoolByDriverId: vi.fn(),
+      updateVehicleStatus: vi.fn(),
     };
     driverService = new DriverService(mockDriverRepo as unknown as DriverRepository);
   });
@@ -110,4 +112,73 @@ describe('DriverService Unit Tests', () => {
 
     await expect(driverService.getDriverMe(CAST.driver.id)).rejects.toThrow(NotFoundError);
   });
+
+  it('successfully updates driver vehicle status to OFFLINE', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.updateVehicleStatus.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: CAST.driver.vehicle.capacity,
+      status: 'OFFLINE',
+    });
+
+    const result = await driverService.updateDriverStatus(CAST.driver.id, 'OFFLINE');
+
+    expect(mockDriverRepo.updateVehicleStatus).toHaveBeenCalledWith(CAST.driver.id, 'OFFLINE');
+    expect(result.status).toBe('OFFLINE');
+    expect(result.vehicle.status).toBe('OFFLINE');
+  });
+
+  it('successfully updates driver vehicle status to ONLINE', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.updateVehicleStatus.mockResolvedValue({
+      id: CAST.driver.vehicle.id,
+      driverId: CAST.driver.id,
+      name: CAST.driver.vehicle.name,
+      regNo: CAST.driver.vehicle.regNo,
+      capacity: CAST.driver.vehicle.capacity,
+      status: 'ONLINE',
+    });
+
+    const result = await driverService.updateDriverStatus(CAST.driver.id, 'ONLINE');
+
+    expect(mockDriverRepo.updateVehicleStatus).toHaveBeenCalledWith(CAST.driver.id, 'ONLINE');
+    expect(result.status).toBe('ONLINE');
+    expect(result.vehicle.status).toBe('ONLINE');
+  });
+
+  it('throws NotFoundError on updateDriverStatus when driver user is not found', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+    await expect(
+      driverService.updateDriverStatus('non-existent-id', 'ONLINE')
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError on updateDriverStatus when driver has no vehicle linked', async () => {
+    mockDriverRepo.findDriverById.mockResolvedValue({
+      id: CAST.driver.id,
+      name: CAST.driver.name,
+      email: CAST.driver.email,
+      role: 'DRIVER',
+    });
+    mockDriverRepo.updateVehicleStatus.mockResolvedValue(null);
+
+    await expect(
+      driverService.updateDriverStatus(CAST.driver.id, 'ONLINE')
+    ).rejects.toThrow(NotFoundError);
+  });
 });
+

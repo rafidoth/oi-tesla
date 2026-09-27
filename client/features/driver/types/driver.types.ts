@@ -29,3 +29,13 @@ export interface DriverMeResponse {
   vehicle: DriverVehicle;
   activePool: DriverActivePool | null;
 }
+
+export interface UpdateDriverStatusInput {
+  status: 'ONLINE' | 'OFFLINE';
+}
+
+export interface UpdateDriverStatusResponse {
+  status: 'ONLINE' | 'OFFLINE';
+  vehicle: DriverVehicle;
+}
+
