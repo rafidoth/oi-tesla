@@ -98,3 +98,37 @@ export interface PayRideResponseDto {
     markedBy: string | null;
   };
 }
+
+export interface PassengerRideHistoryItemDto {
+  id: string;
+  rideRequestId: string;
+  poolId: string;
+  status: 'COMPLETED' | 'CANCELLED';
+  seats: number;
+  farePaisa: number;
+  paymentMethod: string;
+  paymentStatus: string | null;
+  pickupLocation: {
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+  };
+  destLocation: {
+    id: number;
+    name: string;
+    lat: number;
+    lng: number;
+  };
+  driver: {
+    name: string;
+  } | null;
+  vehicle: {
+    name: string;
+    regNo: string;
+  } | null;
+  createdAt: string;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+}

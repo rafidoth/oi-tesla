@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { requestRideSchema, createRideSchema, cancelRideSchema } from '../../src/modules/rides/rides.schema.js';
+import {
+  requestRideSchema,
+  createRideSchema,
+  cancelRideSchema,
+  getPassengerRidesQuerySchema,
+} from '../../src/modules/rides/rides.schema.js';
 
 describe('requestRideSchema validation tests', () => {
   it('successfully validates correct input', () => {
@@ -159,6 +164,27 @@ describe('cancelRideSchema validation tests', () => {
   it('rejects reason exceeding 255 characters', () => {
     const parsed = cancelRideSchema.safeParse({ reason: 'a'.repeat(256) });
     expect(parsed.success).toBe(false);
+  });
+});
+
+describe('getPassengerRidesQuerySchema validation tests', () => {
+  it('accepts empty query object', () => {
+    const parsed = getPassengerRidesQuerySchema.safeParse({});
+    expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data).toEqual({});
+    }
+  });
+
+  it('accepts valid status values: COMPLETED, CANCELLED, ALL', () => {
+    expect(getPassengerRidesQuerySchema.safeParse({ status: 'COMPLETED' }).success).toBe(true);
+    expect(getPassengerRidesQuerySchema.safeParse({ status: 'CANCELLED' }).success).toBe(true);
+    expect(getPassengerRidesQuerySchema.safeParse({ status: 'ALL' }).success).toBe(true);
+  });
+
+  it('rejects invalid status value', () => {
+    expect(getPassengerRidesQuerySchema.safeParse({ status: 'INVALID' }).success).toBe(false);
+    expect(getPassengerRidesQuerySchema.safeParse({ status: 'ACTIVE' }).success).toBe(false);
   });
 });
 

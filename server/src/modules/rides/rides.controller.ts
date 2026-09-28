@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { RidesService } from './rides.service.js';
-import type { RequestRideInput, CreateRideInput, CancelRideInput } from './rides.schema.js';
+import type {
+  RequestRideInput,
+  CreateRideInput,
+  CancelRideInput,
+  GetPassengerRidesQueryInput,
+} from './rides.schema.js';
 import type { AuthenticatedRequest } from '../../shared/types/AuthenticatedRequest.js';
 import { UnauthorizedError } from '../../shared/errors/UnauthorizedError.js';
 
@@ -33,6 +38,17 @@ export class RidesController {
       const passengerId = this.extractPassengerId(req);
       const activeRide = await this.ridesService.getActiveRide(passengerId);
       res.status(200).json(activeRide);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getPassengerRides(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const passengerId = this.extractPassengerId(req);
+      const query = req.query as GetPassengerRidesQueryInput;
+      const history = await this.ridesService.getPassengerRideHistory(passengerId, query);
+      res.status(200).json(history);
     } catch (err) {
       next(err);
     }

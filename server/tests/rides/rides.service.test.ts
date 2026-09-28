@@ -17,6 +17,7 @@ describe('RidesService Unit Tests', () => {
     createPassengerRide: ReturnType<typeof vi.fn>;
     findRideForTeslaPaySettlement: ReturnType<typeof vi.fn>;
     markTeslaPayPaymentAsPaid: ReturnType<typeof vi.fn>;
+    findPassengerRideHistory: ReturnType<typeof vi.fn>;
   };
   let mockLocationsService: {
     getDistance: ReturnType<typeof vi.fn>;
@@ -42,6 +43,7 @@ describe('RidesService Unit Tests', () => {
       createPassengerRide: vi.fn(),
       findRideForTeslaPaySettlement: vi.fn(),
       markTeslaPayPaymentAsPaid: vi.fn(),
+      findPassengerRideHistory: vi.fn(),
     };
     mockLocationsService = {
       getDistance: vi.fn(),
@@ -482,6 +484,116 @@ describe('RidesService Unit Tests', () => {
       await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
         ConflictError
       );
+    });
+  });
+
+  describe('getPassengerRideHistory', () => {
+    const passengerId = 'passenger-uuid-1';
+    const baseRecord = {
+      id: 'ride-uuid-1',
+      rideRequestId: 'req-uuid-1',
+      passengerId,
+      poolId: 'pool-uuid-1',
+      seats: 2,
+      farePaisa: 28000,
+      cancelledAt: null,
+      cancelReason: null,
+      completedAt: new Date('2026-09-28T10:30:00Z'),
+      createdAt: new Date('2026-09-28T10:00:00Z'),
+      updatedAt: new Date('2026-09-28T10:30:00Z'),
+      originalEstimateFarePaisa: 30000,
+      paymentMethod: 'TESLAPAY',
+      paymentStatus: 'PAID',
+      pickupLocation: {
+        id: 1,
+        name: 'Airport Terminal 3',
+        lat: '23.8500',
+        lng: '90.4000',
+      },
+      destLocation: {
+        id: 3,
+        name: 'Gulshan 2 Circle',
+        lat: '23.7900',
+        lng: '90.4100',
+      },
+      driver: { name: 'Karim Ullah' },
+      vehicle: { name: 'Tesla Model Y', regNo: 'DHA-LA-5544' },
+    };
+
+    it('maps completed ride history records correctly', async () => {
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([baseRecord]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId, {
+        status: 'COMPLETED',
+      });
+
+      expect(mockRidesRepo.findPassengerRideHistory).toHaveBeenCalledWith(passengerId, {
+        status: 'COMPLETED',
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 'ride-uuid-1',
+        rideRequestId: 'req-uuid-1',
+        poolId: 'pool-uuid-1',
+        status: 'COMPLETED',
+        seats: 2,
+        farePaisa: 28000,
+        paymentMethod: 'TESLAPAY',
+        paymentStatus: 'PAID',
+        pickupLocation: {
+          id: 1,
+          name: 'Airport Terminal 3',
+          lat: 23.85,
+          lng: 90.4,
+        },
+        destLocation: {
+          id: 3,
+          name: 'Gulshan 2 Circle',
+          lat: 23.79,
+          lng: 90.41,
+        },
+        driver: { name: 'Karim Ullah' },
+        vehicle: { name: 'Tesla Model Y', regNo: 'DHA-LA-5544' },
+        createdAt: '2026-09-28T10:00:00.000Z',
+        completedAt: '2026-09-28T10:30:00.000Z',
+        cancelledAt: null,
+        cancelReason: null,
+      });
+    });
+
+    it('derives CANCELLED status and falls back to estimate fare when farePaisa is null', async () => {
+      const cancelledRecord = {
+        ...baseRecord,
+        id: 'ride-uuid-2',
+        farePaisa: null,
+        completedAt: null,
+        cancelledAt: new Date('2026-09-28T10:05:00Z'),
+        cancelReason: 'Driver took too long',
+        paymentStatus: null,
+        driver: null,
+        vehicle: null,
+      };
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([cancelledRecord]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe('CANCELLED');
+      expect(result[0].farePaisa).toBe(30000);
+      expect(result[0].cancelledAt).toBe('2026-09-28T10:05:00.000Z');
+      expect(result[0].cancelReason).toBe('Driver took too long');
+      expect(result[0].completedAt).toBeNull();
+      expect(result[0].paymentStatus).toBeNull();
+      expect(result[0].driver).toBeNull();
+      expect(result[0].vehicle).toBeNull();
+    });
+
+    it('returns empty array when passenger has no history', async () => {
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId);
+
+      expect(result).toEqual([]);
     });
   });
 });

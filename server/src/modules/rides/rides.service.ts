@@ -19,9 +19,18 @@ import type {
   ActiveRideDetailsDto,
   CancelRideResponseDto,
   PayRideResponseDto,
+  PassengerRideHistoryItemDto,
 } from './rides.types.js';
-import type { CreateRideInput, CancelRideInput } from './rides.schema.js';
-import type { ActiveRideRecord, PassengerRideTeslaPaySettlementInfo } from './rides.repository.js';
+import type {
+  CreateRideInput,
+  CancelRideInput,
+  GetPassengerRidesQueryInput,
+} from './rides.schema.js';
+import type {
+  ActiveRideRecord,
+  PassengerRideTeslaPaySettlementInfo,
+  PassengerRideHistoryRecord,
+} from './rides.repository.js';
 
 type DbType = typeof db;
 
@@ -187,6 +196,14 @@ export class RidesService {
     return this.formatRideDetails(record);
   }
 
+  async getPassengerRideHistory(
+    passengerId: string,
+    query?: GetPassengerRidesQueryInput
+  ): Promise<PassengerRideHistoryItemDto[]> {
+    const records = await this.ridesRepo.findPassengerRideHistory(passengerId, query);
+    return records.map((record) => this.mapToPassengerRideHistoryItem(record));
+  }
+
   async cancelRide(
     rideId: string,
     passengerId: string,
@@ -327,6 +344,51 @@ export class RidesService {
       cancelledAt: ride.cancelledAt,
       completedAt: ride.completedAt,
     };
+  }
+
+  private mapToPassengerRideHistoryItem(
+    record: PassengerRideHistoryRecord
+  ): PassengerRideHistoryItemDto {
+    return {
+      id: record.id,
+      rideRequestId: record.rideRequestId,
+      poolId: record.poolId,
+      status: this.deriveHistoryStatus(record),
+      seats: record.seats,
+      farePaisa: this.resolveHistoryFare(record),
+      paymentMethod: record.paymentMethod,
+      paymentStatus: record.paymentStatus ?? null,
+      pickupLocation: {
+        id: record.pickupLocation.id,
+        name: record.pickupLocation.name,
+        lat: Number(record.pickupLocation.lat),
+        lng: Number(record.pickupLocation.lng),
+      },
+      destLocation: {
+        id: record.destLocation.id,
+        name: record.destLocation.name,
+        lat: Number(record.destLocation.lat),
+        lng: Number(record.destLocation.lng),
+      },
+      driver: record.driver ? { name: record.driver.name } : null,
+      vehicle: record.vehicle
+        ? { name: record.vehicle.name, regNo: record.vehicle.regNo }
+        : null,
+      createdAt: new Date(record.createdAt).toISOString(),
+      completedAt: record.completedAt ? new Date(record.completedAt).toISOString() : null,
+      cancelledAt: record.cancelledAt ? new Date(record.cancelledAt).toISOString() : null,
+      cancelReason: record.cancelReason ?? null,
+    };
+  }
+
+  private deriveHistoryStatus(record: PassengerRideHistoryRecord): 'COMPLETED' | 'CANCELLED' {
+    return record.cancelledAt ? 'CANCELLED' : 'COMPLETED';
+  }
+
+  private resolveHistoryFare(record: PassengerRideHistoryRecord): number {
+    return record.farePaisa !== null && record.farePaisa !== undefined
+      ? record.farePaisa
+      : record.originalEstimateFarePaisa;
   }
 
   async payWithTeslaPay(rideId: string, passengerId: string): Promise<PayRideResponseDto> {

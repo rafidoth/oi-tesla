@@ -317,4 +317,63 @@ describe('RidesController Unit Tests', () => {
       expect(next).toHaveBeenCalledWith(error);
     });
   });
+
+  describe('getPassengerRides', () => {
+    it('responds with 200 and ride history list', async () => {
+      const mockHistory: any = [
+        {
+          id: 'ride-1',
+          rideRequestId: 'req-1',
+          poolId: 'pool-1',
+          status: 'COMPLETED',
+          seats: 1,
+          farePaisa: 15000,
+          paymentMethod: 'TESLAPAY',
+          paymentStatus: 'PAID',
+          pickupLocation: { id: 1, name: 'Airport', lat: 23.85, lng: 90.4 },
+          destLocation: { id: 2, name: 'Gulshan', lat: 23.79, lng: 90.41 },
+          driver: { name: 'Rahim' },
+          vehicle: { name: 'Model 3', regNo: 'DHA-1234' },
+          createdAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          cancelledAt: null,
+          cancelReason: null,
+        },
+      ];
+      mockRidesService.getPassengerRideHistory = vi.fn().mockResolvedValue(mockHistory);
+
+      const authReq: any = {
+        query: { status: 'COMPLETED' },
+        user: { sub: 'user-uuid-1', role: 'PASSENGER' },
+      };
+
+      await controller.getPassengerRides(authReq, res as Response, next);
+
+      expect(mockRidesService.getPassengerRideHistory).toHaveBeenCalledWith('user-uuid-1', {
+        status: 'COMPLETED',
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockHistory);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('calls next(err) if unauthenticated', async () => {
+      const unauthReq: any = { query: {} };
+      await controller.getPassengerRides(unauthReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('calls next(err) if getPassengerRideHistory throws', async () => {
+      const error = new Error('Database query failure');
+      mockRidesService.getPassengerRideHistory = vi.fn().mockRejectedValue(error);
+
+      const authReq: any = {
+        query: {},
+        user: { sub: 'user-uuid-1', role: 'PASSENGER' },
+      };
+
+      await controller.getPassengerRides(authReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(error);
+    });
+  });
 });

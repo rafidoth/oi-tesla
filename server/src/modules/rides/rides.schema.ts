@@ -40,3 +40,9 @@ export const rideIdParamsSchema = z.object({
 
 export type RideIdParamsInput = z.infer<typeof rideIdParamsSchema>;
 
+export const getPassengerRidesQuerySchema = z.object({
+  status: z.enum(['COMPLETED', 'CANCELLED', 'ALL']).optional(),
+});
+
+export type GetPassengerRidesQueryInput = z.infer<typeof getPassengerRidesQuerySchema>;
+

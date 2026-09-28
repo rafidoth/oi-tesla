@@ -8,6 +8,7 @@ import type {
   CancelRideDto,
   CancelRideResponseDto,
   PayRideResponseDto,
+  PassengerRideHistoryItemDto,
 } from "../types/rides.types";
 
 export async function fetchFareEstimate(
@@ -28,7 +29,6 @@ export async function createRide(
   return response.data;
 }
 
-
 export async function fetchActiveRide(): Promise<ActiveRideDetailsDto | null> {
   const endpoint = "/rides/active";
   const url = baseUrlWrapper(endpoint);
@@ -36,6 +36,14 @@ export async function fetchActiveRide(): Promise<ActiveRideDetailsDto | null> {
   return response.data;
 }
 
+export async function fetchPassengerRideHistory(
+  params?: { status?: string }
+): Promise<PassengerRideHistoryItemDto[]> {
+  const endpoint = "/rides";
+  const url = baseUrlWrapper(endpoint);
+  const response = await apiClient.get<PassengerRideHistoryItemDto[]>(url, { params });
+  return response.data;
+}
 
 export async function fetchRideById(id: string): Promise<ActiveRideDetailsDto> {
   const endpoint = `/rides/${id}`;
@@ -67,6 +75,7 @@ export const ridesApi = {
   fetchFareEstimate,
   createRide,
   fetchActiveRide,
+  fetchPassengerRideHistory,
   fetchRideById,
   cancelRide,
   payTeslaPayRide,

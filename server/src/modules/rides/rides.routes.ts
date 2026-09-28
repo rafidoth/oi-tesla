@@ -3,7 +3,13 @@ import type { RidesController } from './rides.controller.js';
 import { validate } from '../../shared/middleware/validate.js';
 import { authenticate } from '../../shared/middleware/authenticate.js';
 import { authorize } from '../../shared/middleware/authorize.js';
-import { createRideSchema, requestRideSchema, cancelRideSchema, rideIdParamsSchema } from './rides.schema.js';
+import {
+  createRideSchema,
+  requestRideSchema,
+  cancelRideSchema,
+  rideIdParamsSchema,
+  getPassengerRidesQuerySchema,
+} from './rides.schema.js';
 import type { AuthenticatedRequest } from '../../shared/types/AuthenticatedRequest.js';
 
 export function createRidesRouter(controller: RidesController): Router {
@@ -28,6 +34,14 @@ export function createRidesRouter(controller: RidesController): Router {
     authenticate,
     authorize('PASSENGER'),
     (req, res, next) => controller.getActiveRide(req as AuthenticatedRequest, res, next)
+  );
+
+  router.get(
+    '/',
+    authenticate,
+    authorize('PASSENGER'),
+    validate(getPassengerRidesQuerySchema, 'query'),
+    (req, res, next) => controller.getPassengerRides(req as AuthenticatedRequest, res, next)
   );
 
   router.get(
