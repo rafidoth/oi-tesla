@@ -142,6 +142,16 @@ export class DriverController {
     }
   }
 
+  async markCashReceived(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = this.extractDriverId(req);
+      const response = await this.driverService.markCashReceived(driverId, req.params.id);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   private extractDriverId(req: AuthenticatedRequest): string {
     const driverId = req.user?.sub || req.user?.id;
     if (!driverId) {

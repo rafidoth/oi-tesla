@@ -9,6 +9,7 @@ import type {
   DriverPoolRosterMember,
   PoolLifecycleAction,
   TransitionPoolResponse,
+  MarkCashReceivedResponse,
 } from "../types/driver.types";
 
 export const driverApi = {
@@ -73,6 +74,15 @@ export const driverApi = {
   ): Promise<TransitionPoolResponse> {
     const response = await apiClient.post<TransitionPoolResponse>(
       baseUrlWrapper(`/driver/pools/${poolId}/${action}`)
+    );
+    return response.data;
+  },
+
+  async markCashReceived(
+    passengerRideId: string
+  ): Promise<MarkCashReceivedResponse> {
+    const response = await apiClient.post<MarkCashReceivedResponse>(
+      baseUrlWrapper(`/driver/rides/${passengerRideId}/cash-received`)
     );
     return response.data;
   },

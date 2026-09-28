@@ -23,6 +23,7 @@ import type {
   OpenPoolMemberRequest,
   OpenPoolDestinationStop,
   DriverPoolRosterMember,
+  PassengerRideCashSettlementInfo,
 } from './driver.types.js';
 
 
@@ -493,6 +494,63 @@ export class DriverRepository {
     }
 
     return { membersByPoolId, stopsByPoolId };
+  }
+
+  async findPassengerRideForCashSettlement(
+    passengerRideId: string,
+    tx?: any
+  ): Promise<PassengerRideCashSettlementInfo | null> {
+    const client = tx ?? this.dbClient;
+    const [row] = await client
+      .select({
+        passengerRideId: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+        poolId: passengerRides.poolId,
+        completedAt: passengerRides.completedAt,
+        driverId: pools.driverId,
+        poolStatus: pools.status,
+        paymentId: payments.id,
+        paymentMethod: rideRequests.paymentMethod,
+        paymentAmountPaisa: payments.amountPaisa,
+        paymentStatus: payments.status,
+        paymentPaidAt: payments.paidAt,
+        paymentMarkedBy: payments.markedBy,
+      })
+      .from(passengerRides)
+      .innerJoin(pools, eq(passengerRides.poolId, pools.id))
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
+      .where(eq(passengerRides.id, passengerRideId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async markPaymentAsPaid(
+    paymentId: string,
+    driverId: string,
+    paidAt: Date,
+    tx?: any
+  ): Promise<Payment | null> {
+    const client = tx ?? this.dbClient;
+    const [updated] = await client
+      .update(payments)
+      .set({
+        status: 'PAID',
+        paidAt,
+        markedBy: driverId,
+        updatedAt: paidAt,
+      })
+      .where(
+        and(
+          eq(payments.id, paymentId),
+          eq(payments.status, 'PENDING')
+        )
+      )
+      .returning();
+
+    return updated ?? null;
   }
 }
 

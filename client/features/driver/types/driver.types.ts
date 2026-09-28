@@ -118,3 +118,16 @@ export interface TransitionPoolResponse {
   status: string;
 }
 
+export interface MarkCashReceivedResponse {
+  success: boolean;
+  payment: {
+    id: string;
+    passengerRideId: string;
+    method: string;
+    amountPaisa: number;
+    status: string;
+    paidAt: string | null;
+    markedBy: string | null;
+  };
+}
+

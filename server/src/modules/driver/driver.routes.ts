@@ -8,6 +8,7 @@ import {
   getDriverPoolsQuerySchema,
   poolIdParamsSchema,
   declinePoolSchema,
+  rideIdParamsSchema,
 } from './driver.schema.js';
 
 export function createDriverRouter(controller: DriverController): Router {
@@ -88,6 +89,14 @@ export function createDriverRouter(controller: DriverController): Router {
     authorize('DRIVER'),
     validate(poolIdParamsSchema, 'params'),
     (req, res, next) => controller.completePool(req, res, next)
+  );
+
+  router.post(
+    '/rides/:id/cash-received',
+    authenticate,
+    authorize('DRIVER'),
+    validate(rideIdParamsSchema, 'params'),
+    (req, res, next) => controller.markCashReceived(req, res, next)
   );
 
   return router;

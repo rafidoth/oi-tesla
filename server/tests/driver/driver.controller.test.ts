@@ -18,6 +18,7 @@ describe('DriverController Unit Tests', () => {
     arrivePool: ReturnType<typeof vi.fn>;
     startPool: ReturnType<typeof vi.fn>;
     completePool: ReturnType<typeof vi.fn>;
+    markCashReceived: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -35,6 +36,7 @@ describe('DriverController Unit Tests', () => {
       arrivePool: vi.fn(),
       startPool: vi.fn(),
       completePool: vi.fn(),
+      markCashReceived: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -607,6 +609,52 @@ describe('DriverController Unit Tests', () => {
     it('completePool delegates UnauthorizedError when unauthenticated', async () => {
       await controller.completePool(unauthReq, res as Response, next);
       expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    });
+
+    it('markCashReceived returns 200 on success', async () => {
+      const mockResult = {
+        success: true,
+        payment: {
+          id: 'pay-uuid-1',
+          passengerRideId: 'ride-uuid-1',
+          method: 'CASH',
+          amountPaisa: 35000,
+          status: 'PAID',
+          paidAt: new Date(),
+          markedBy: CAST.driver.id,
+        },
+      };
+      mockDriverService.markCashReceived.mockResolvedValue(mockResult);
+
+      const cashReq = {
+        params: { id: 'ride-uuid-1' },
+        user: { id: CAST.driver.id, role: 'DRIVER' },
+      } as unknown as AuthenticatedRequest;
+
+      await controller.markCashReceived(cashReq, res as Response, next);
+
+      expect(mockDriverService.markCashReceived).toHaveBeenCalledWith(CAST.driver.id, 'ride-uuid-1');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockResult);
+    });
+
+    it('markCashReceived delegates UnauthorizedError when unauthenticated', async () => {
+      await controller.markCashReceived(unauthReq, res as Response, next);
+      expect(next).toHaveBeenCalledWith(expect.any(UnauthorizedError));
+    });
+
+    it('markCashReceived delegates error to next when service fails', async () => {
+      const error = new Error('Payment error');
+      mockDriverService.markCashReceived.mockRejectedValue(error);
+
+      const cashReq = {
+        params: { id: 'ride-uuid-1' },
+        user: { id: CAST.driver.id, role: 'DRIVER' },
+      } as unknown as AuthenticatedRequest;
+
+      await controller.markCashReceived(cashReq, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
     });
   });
 });

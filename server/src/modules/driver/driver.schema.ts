@@ -27,3 +27,9 @@ export const declinePoolSchema = z
   .default({});
 
 export type DeclinePoolInput = z.infer<typeof declinePoolSchema>;
+
+export const rideIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type RideIdParamsInput = z.infer<typeof rideIdParamsSchema>;

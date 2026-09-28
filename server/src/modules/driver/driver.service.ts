@@ -17,6 +17,8 @@ import type {
   DriverPoolDetailsResponse,
   OpenPoolDestinationStop,
   DriverPoolRosterMember,
+  PassengerRideCashSettlementInfo,
+  MarkCashReceivedResponse,
 } from './driver.types.js';
 import type { DeclinePoolInput } from './driver.schema.js';
 
@@ -714,6 +716,132 @@ export class DriverService {
       throw new ConflictError('DRIVER_HAS_ACTIVE_POOL', 'Driver already has an active pool in progress');
     }
     throw err;
+  }
+
+  async markCashReceived(
+    driverId: string,
+    passengerRideId: string
+  ): Promise<MarkCashReceivedResponse> {
+    await this.assertDriverExists(driverId);
+    return await this.driverRepo.withTransaction(async (tx) => {
+      const rideInfo = await this.findAndValidateCashRide(passengerRideId, driverId, tx);
+      return await this.executeCashSettlement(rideInfo, driverId, tx);
+    });
+  }
+
+  private async findAndValidateCashRide(
+    passengerRideId: string,
+    driverId: string,
+    tx: any
+  ): Promise<PassengerRideCashSettlementInfo> {
+    const info = await this.driverRepo.findPassengerRideForCashSettlement(passengerRideId, tx);
+    this.assertCashRideFound(info);
+    this.assertDriverAssignedToRide(info, driverId);
+    this.assertRideCompleted(info);
+    this.assertPaymentMethodIsCash(info);
+    this.assertPaymentPending(info);
+    return info;
+  }
+
+  private assertCashRideFound(
+    info: PassengerRideCashSettlementInfo | null
+  ): asserts info is PassengerRideCashSettlementInfo {
+    if (!info) {
+      throw new NotFoundError('Passenger ride not found');
+    }
+  }
+
+  private assertDriverAssignedToRide(
+    info: PassengerRideCashSettlementInfo,
+    driverId: string
+  ): void {
+    if (info.driverId !== driverId) {
+      throw new ForbiddenError('Only the assigned driver can confirm cash receipt');
+    }
+  }
+
+  private assertRideCompleted(info: PassengerRideCashSettlementInfo): void {
+    if (!info.completedAt) {
+      throw new InvalidTransitionError(
+        'RIDE_NOT_COMPLETED',
+        'Cannot confirm cash receipt for an incomplete ride'
+      );
+    }
+  }
+
+  private assertPaymentMethodIsCash(info: PassengerRideCashSettlementInfo): void {
+    if (info.paymentMethod !== 'CASH') {
+      throw new InvalidTransitionError(
+        'INVALID_PAYMENT_METHOD',
+        'Only cash payments can be marked as received by driver'
+      );
+    }
+  }
+
+  private assertPaymentPending(info: PassengerRideCashSettlementInfo): void {
+    if (!info.paymentId) {
+      throw new NotFoundError('Payment record not found for this ride');
+    }
+    if (info.paymentStatus === 'PAID') {
+      throw new ConflictError('PAYMENT_ALREADY_PAID', 'Cash payment has already been marked as received');
+    }
+    if (info.paymentStatus !== 'PENDING') {
+      throw new InvalidTransitionError('INVALID_PAYMENT_STATUS', 'Payment is not in pending status');
+    }
+  }
+
+  private async executeCashSettlement(
+    info: PassengerRideCashSettlementInfo,
+    driverId: string,
+    tx: any
+  ): Promise<MarkCashReceivedResponse> {
+    const paidAt = new Date();
+    const updated = await this.driverRepo.markPaymentAsPaid(info.paymentId!, driverId, paidAt, tx);
+    if (!updated) {
+      throw new ConflictError('PAYMENT_ALREADY_PAID', 'Cash payment has already been marked as received');
+    }
+    await this.recordCashPaymentAuditEvent(tx, info, updated, driverId, paidAt);
+    return {
+      success: true,
+      payment: {
+        id: updated.id,
+        passengerRideId: updated.passengerRideId,
+        method: updated.method,
+        amountPaisa: updated.amountPaisa,
+        status: updated.status,
+        paidAt: updated.paidAt,
+        markedBy: updated.markedBy,
+      },
+    };
+  }
+
+  private async recordCashPaymentAuditEvent(
+    tx: any,
+    info: PassengerRideCashSettlementInfo,
+    payment: Payment,
+    driverId: string,
+    paidAt: Date
+  ): Promise<void> {
+    await this.eventsService.logRideEvent(
+      {
+        event: 'PAYMENT_COMPLETED',
+        actorType: 'DRIVER',
+        actorId: driverId,
+        poolId: info.poolId,
+        passengerRideId: info.passengerRideId,
+        rideRequestId: info.rideRequestId,
+        fromState: 'PENDING',
+        toState: 'PAID',
+        payload: {
+          paymentId: payment.id,
+          method: 'CASH',
+          amountPaisa: payment.amountPaisa,
+          markedBy: driverId,
+          paidAt: paidAt.toISOString(),
+        },
+      },
+      tx
+    );
   }
 }
 

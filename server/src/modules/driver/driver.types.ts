@@ -110,4 +110,31 @@ export interface DriverPoolDetailsResponse {
   createdAt: Date;
   updatedAt: Date;
 }
+export interface PassengerRideCashSettlementInfo {
+  passengerRideId: string;
+  rideRequestId: string;
+  passengerId: string;
+  poolId: string;
+  completedAt: Date | null;
+  driverId: string | null;
+  poolStatus: string;
+  paymentId: string | null;
+  paymentMethod: string;
+  paymentAmountPaisa: number | null;
+  paymentStatus: string | null;
+  paymentPaidAt: Date | null;
+  paymentMarkedBy: string | null;
+}
 
+export interface MarkCashReceivedResponse {
+  success: boolean;
+  payment: {
+    id: string;
+    passengerRideId: string;
+    method: string;
+    amountPaisa: number;
+    status: string;
+    paidAt: Date | null;
+    markedBy: string | null;
+  };
+}

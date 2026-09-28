@@ -1,26 +1,42 @@
 "use client";
 
 import * as React from "react";
-import { Lock, CheckCircle2, Users } from "lucide-react";
+import { Lock, CheckCircle2, Users, Banknote, Check, Loader2 } from "lucide-react";
 import { FareDisplay } from "@/components/custom/fare-display";
+import { Button } from "@/components/ui/button";
+import { useMarkCashReceivedMutation } from "../hooks/use-mark-cash-received-mutation";
 import type { DriverPoolRosterMember } from "../types/driver.types";
 
 interface PassengerRosterProps {
   roster: DriverPoolRosterMember[];
   isStarted?: boolean;
   isCompleted?: boolean;
+  poolId?: string;
 }
 
 export function PassengerRoster({
   roster,
   isStarted,
   isCompleted,
+  poolId,
 }: PassengerRosterProps) {
+  const { mutate: markCashReceived, isPending, variables } =
+    useMarkCashReceivedMutation();
+
+  const handleMarkCash = (passengerRideId: string) => {
+    markCashReceived({ passengerRideId, poolId });
+  };
+
   return (
     <div className="space-y-4">
       <RosterHeader count={roster.length} isCompleted={isCompleted} />
       <RosterStatusAlert isCompleted={isCompleted} isStarted={isStarted} />
-      <RosterContent roster={roster} isCompleted={isCompleted} />
+      <RosterContent
+        roster={roster}
+        isCompleted={isCompleted}
+        pendingRideId={isPending ? variables?.passengerRideId : undefined}
+        onMarkCash={handleMarkCash}
+      />
       <RosterFooter roster={roster} isStarted={isStarted} />
     </div>
   );
@@ -74,9 +90,13 @@ function RosterStatusAlert({
 function RosterContent({
   roster,
   isCompleted,
+  pendingRideId,
+  onMarkCash,
 }: {
   roster: DriverPoolRosterMember[];
   isCompleted?: boolean;
+  pendingRideId?: string;
+  onMarkCash: (passengerRideId: string) => void;
 }) {
   if (roster.length === 0) {
     return <RosterEmptyState />;
@@ -84,7 +104,13 @@ function RosterContent({
   return (
     <div className="space-y-3">
       {roster.map((member) => (
-        <PassengerCard key={member.id} member={member} isCompleted={isCompleted} />
+        <PassengerCard
+          key={member.id}
+          member={member}
+          isCompleted={isCompleted}
+          isPending={pendingRideId === member.id}
+          onMarkCash={() => onMarkCash(member.id)}
+        />
       ))}
     </div>
   );
@@ -93,14 +119,23 @@ function RosterContent({
 function PassengerCard({
   member,
   isCompleted,
+  isPending,
+  onMarkCash,
 }: {
   member: DriverPoolRosterMember;
   isCompleted?: boolean;
+  isPending?: boolean;
+  onMarkCash?: () => void;
 }) {
   return (
     <div className="p-4 rounded-xl bg-white border border-border/70 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-3 hover:border-border transition-colors">
       <div className="flex items-start justify-between gap-3">
-        <PassengerIdentity member={member} />
+        <PassengerIdentity
+          member={member}
+          isCompleted={isCompleted}
+          isPending={isPending}
+          onMarkCash={onMarkCash}
+        />
         <PassengerFareBlock
           farePaisa={member.farePaisa}
           paymentMethod={member.paymentMethod}
@@ -111,13 +146,32 @@ function PassengerCard({
   );
 }
 
-function PassengerIdentity({ member }: { member: DriverPoolRosterMember }) {
+function PassengerIdentity({
+  member,
+  isCompleted,
+  isPending,
+  onMarkCash,
+}: {
+  member: DriverPoolRosterMember;
+  isCompleted?: boolean;
+  isPending?: boolean;
+  onMarkCash?: () => void;
+}) {
   return (
     <div className="flex items-center gap-3 min-w-0">
       <PassengerAvatar name={member.passengerName} />
-      <div className="min-w-0 space-y-0.5">
-        <div className="font-bold text-sm text-ink truncate">
-          {member.passengerName}
+      <div className="min-w-0 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-sm text-ink truncate">
+            {member.passengerName}
+          </span>
+          {isCompleted && member.paymentMethod === "CASH" && (
+            <CashCollectionButton
+              isPaid={member.paymentStatus === "PAID"}
+              isPending={isPending}
+              onMarkCash={onMarkCash}
+            />
+          )}
         </div>
         <div className="text-xs text-ink-secondary truncate flex items-center gap-1">
           <span className="font-medium text-ink">{member.pickupLocationName}</span>
@@ -126,6 +180,54 @@ function PassengerIdentity({ member }: { member: DriverPoolRosterMember }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function CashCollectionButton({
+  isPaid,
+  isPending,
+  onMarkCash,
+}: {
+  isPaid: boolean;
+  isPending?: boolean;
+  onMarkCash?: () => void;
+}) {
+  if (isPaid) {
+    return (
+      <Button
+        type="button"
+        size="sm"
+        disabled
+        variant="outline"
+        className="h-6 px-2 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 cursor-not-allowed opacity-90"
+      >
+        <Check className="size-2.5 mr-1 text-emerald-600" />
+        Cash Received
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={isPending}
+      onClick={onMarkCash}
+      className="h-6 px-2 text-[10px] font-semibold bg-white border-neutral-300 text-neutral-800 hover:bg-neutral-50 hover:text-black hover:border-black transition-colors cursor-pointer"
+    >
+      {isPending ? (
+        <>
+          <Loader2 className="size-2.5 animate-spin mr-1" />
+          Recording...
+        </>
+      ) : (
+        <>
+          <Banknote className="size-2.5 mr-1 text-neutral-700" />
+          Mark Cash Received
+        </>
+      )}
+    </Button>
   );
 }
 
@@ -176,12 +278,13 @@ function PassengerDetailsRow({
       </span>
       {isCompleted ? (
         <span
-          className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${
+          className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${
             isPaid
               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
               : "bg-amber-50 text-amber-800 border-amber-200"
           }`}
         >
+          {isPaid && <Check className="size-3 text-emerald-600" />}
           {isPaid ? "Paid" : "Pending Settlement"}
         </span>
       ) : (

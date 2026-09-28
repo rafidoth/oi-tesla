@@ -97,6 +97,7 @@ export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleP
               roster={pool.roster}
               isStarted={isStarted}
               isCompleted={isCompleted}
+              poolId={pool.id}
             />
           </Card>
         </div>
