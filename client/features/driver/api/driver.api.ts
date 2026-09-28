@@ -6,6 +6,7 @@ import type {
   OpenPoolItem,
   AcceptPoolResponse,
   DriverPoolDetailsResponse,
+  DriverPoolRosterMember,
   PoolLifecycleAction,
   TransitionPoolResponse,
 } from "../types/driver.types";
@@ -14,6 +15,13 @@ export const driverApi = {
   async getDriverPoolDetails(poolId: string): Promise<DriverPoolDetailsResponse> {
     const response = await apiClient.get<DriverPoolDetailsResponse>(
       baseUrlWrapper(`/driver/pools/${poolId}`)
+    );
+    return response.data;
+  },
+
+  async getDriverPoolRoster(poolId: string): Promise<DriverPoolRosterMember[]> {
+    const response = await apiClient.get<DriverPoolRosterMember[]>(
+      baseUrlWrapper(`/driver/pools/${poolId}/roster`)
     );
     return response.data;
   },

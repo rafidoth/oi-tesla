@@ -207,6 +207,18 @@ export class DriverService {
     };
   }
 
+  async getDriverPoolRoster(
+    driverId: string,
+    poolId: string
+  ): Promise<DriverPoolRosterMember[]> {
+    await this.assertDriverExists(driverId);
+    const pool = await this.driverRepo.findDriverPoolById(poolId, driverId);
+    if (!pool) {
+      throw new NotFoundError('Pool not found');
+    }
+    return await this.driverRepo.findActiveRosterForPool(poolId, pool.status);
+  }
+
   async arrivePool(
     driverId: string,
     poolId: string

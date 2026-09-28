@@ -102,6 +102,16 @@ export class DriverController {
     }
   }
 
+  async getDriverPoolRoster(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const driverId = this.extractDriverId(req);
+      const response = await this.driverService.getDriverPoolRoster(driverId, req.params.id);
+      res.status(200).json(response);
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async arrivePool(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const driverId = this.extractDriverId(req);

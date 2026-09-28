@@ -41,6 +41,14 @@ export function createDriverRouter(controller: DriverController): Router {
     (req, res, next) => controller.getDriverPoolById(req, res, next)
   );
 
+  router.get(
+    '/pools/:id/roster',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.getDriverPoolRoster(req, res, next)
+  );
+
   router.post(
     '/pools/:id/accept',
     authenticate,

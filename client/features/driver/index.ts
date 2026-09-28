@@ -13,4 +13,5 @@ export * from "./hooks/use-pool-transition-mutation";
 export * from "./hooks/use-driver-pool-details-query";
 export * from "./components/active-pool-console";
 export * from "./components/pool-lifecycle-actions";
+export * from "./components/passenger-roster";
 

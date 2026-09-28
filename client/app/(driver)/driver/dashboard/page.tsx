@@ -16,15 +16,15 @@ import {
 export default function DriverDashboardPage() {
   const { data, isLoading, isError, error, refetch } = useDriverMeQuery();
 
-  const [viewingCompletedPoolId, setViewingCompletedPoolId] = React.useState<string | null>(null);
+  const [retainedPoolId, setRetainedPoolId] = React.useState<string | null>(null);
+  const [prevServerPoolId, setPrevServerPoolId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (data?.activePool?.id) {
-      setViewingCompletedPoolId(data.activePool.id);
-    }
-  }, [data?.activePool?.id]);
+  if (data?.activePool?.id && data.activePool.id !== prevServerPoolId) {
+    setPrevServerPoolId(data.activePool.id);
+    setRetainedPoolId(data.activePool.id);
+  }
 
-  const activePoolId = data?.activePool?.id ?? viewingCompletedPoolId;
+  const activePoolId = data?.activePool?.id ?? retainedPoolId;
   const hasActivePool = Boolean(activePoolId);
   const isOnline = data?.vehicle?.status === "ONLINE";
   const isOffline = data?.vehicle?.status === "OFFLINE";
@@ -102,7 +102,8 @@ export default function DriverDashboardPage() {
         <ActivePoolConsole
           poolId={activePoolId}
           onResetConsole={() => {
-            setViewingCompletedPoolId(null);
+            setRetainedPoolId(null);
+            setPrevServerPoolId(null);
             refetch();
             refetchOpenPools();
           }}

@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, AlertCircle, Lock, CheckCircle2 } from "lucide-react";
+import { RefreshCw, AlertCircle, Lock, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
 import { StatusBadge, type RideStatus } from "@/components/custom/status-badge";
 import { useDriverPoolDetailsQuery } from "../hooks/use-driver-pool-details-query";
 import { PoolLifecycleActions } from "./pool-lifecycle-actions";
+import { PassengerRoster, PassengerRosterSkeleton } from "./passenger-roster";
 import type { DriverPoolRosterMember } from "../types/driver.types";
 
 interface ActivePoolConsoleProps {
@@ -18,6 +19,17 @@ interface ActivePoolConsoleProps {
 export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleProps) {
   const { data: pool, isLoading, isError, error, refetch, isFetching } =
     useDriverPoolDetailsQuery({ poolId });
+
+  const prevRosterCount = React.useRef<number | null>(null);
+  const [showCancellationAlert, setShowCancellationAlert] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!pool) return;
+    if (prevRosterCount.current !== null && pool.roster.length < prevRosterCount.current && pool.status !== "CANCELLED") {
+      setShowCancellationAlert(true);
+    }
+    prevRosterCount.current = pool.roster.length;
+  }, [pool]);
 
   if (isLoading) {
     return <ActivePoolSkeleton />;
@@ -32,11 +44,23 @@ export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleP
     );
   }
 
+  if (pool.status === "CANCELLED") {
+    return (
+      <PoolCancelledNotice
+        poolId={pool.id}
+        onReturnToFeed={onResetConsole}
+      />
+    );
+  }
+
   const isStarted = pool.status === "STARTED" || pool.status === "COMPLETED";
   const isCompleted = pool.status === "COMPLETED";
 
   return (
     <div className="space-y-4">
+      {showCancellationAlert && (
+        <PassengerCancellationAlert onDismiss={() => setShowCancellationAlert(false)} />
+      )}
       <ConsoleTopBar
         poolId={pool.id}
         status={pool.status}
@@ -69,7 +93,7 @@ export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleP
 
         <div className="lg:col-span-7">
           <Card className="p-6 space-y-5">
-            <RosterSection
+            <PassengerRoster
               roster={pool.roster}
               isStarted={isStarted}
               isCompleted={isCompleted}
@@ -111,6 +135,61 @@ function ConsoleTopBar({
         />
       </button>
     </div>
+  );
+}
+
+function PassengerCancellationAlert({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 shadow-xs animate-in fade-in slide-in-from-top-1">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="size-4 text-amber-600 shrink-0" />
+        <span className="font-medium">
+          A passenger cancelled their ride before arrival. Fares and seats have been recalculated.
+        </span>
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="px-2 py-0.5 rounded text-[11px] font-semibold text-amber-800 hover:bg-amber-100 transition cursor-pointer"
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
+function PoolCancelledNotice({
+  poolId,
+  onReturnToFeed,
+}: {
+  poolId: string;
+  onReturnToFeed?: () => void;
+}) {
+  return (
+    <Card className="p-8 border border-neutral-200 bg-white rounded-xl text-center space-y-4 max-w-lg mx-auto shadow-sm">
+      <div className="size-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto border border-red-100">
+        <AlertCircle className="size-6" />
+      </div>
+      <div className="space-y-1">
+        <div className="flex justify-center">
+          <StatusBadge status="CANCELLED" />
+        </div>
+        <h3 className="text-base font-bold text-ink pt-2">Pool Cancelled by Passengers</h3>
+        <p className="text-xs text-ink-secondary leading-relaxed max-w-sm mx-auto">
+          All passengers in pool <span className="font-mono font-medium">#{poolId.slice(0, 8)}</span> cancelled their ride requests before vehicle arrival. The pool has been closed and your vehicle is released.
+        </p>
+      </div>
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={onReturnToFeed}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-white text-xs font-semibold rounded-lg hover:bg-black/90 transition shadow-xs cursor-pointer"
+        >
+          <ArrowLeft className="size-3.5" />
+          Return to Open Pools Feed
+        </button>
+      </div>
+    </Card>
   );
 }
 
@@ -244,206 +323,20 @@ function SettlementSummaryCard({
   );
 }
 
-function RosterSection({
-  roster,
-  isStarted,
-  isCompleted,
-}: {
-  roster: DriverPoolRosterMember[];
-  isStarted?: boolean;
-  isCompleted?: boolean;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between pb-1 border-b border-border/40">
-        <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
-          {isCompleted ? "Settlement Roster" : "Passenger Roster"}
-        </h3>
-        <span className="text-xs font-semibold tabular-nums text-ink-secondary">
-          {roster.length} confirmed
-        </span>
-      </div>
-
-      {isCompleted ? (
-        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-ink">
-          <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
-          <span className="font-medium">Trip Completed · Pending payment records initialized</span>
-        </div>
-      ) : isStarted ? (
-        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-subtle border border-border/80 text-xs text-ink-secondary">
-          <Lock className="size-3.5 text-ink shrink-0" />
-          <span>Fares permanently locked · Trip in motion</span>
-        </div>
-      ) : null}
-
-      <RosterList roster={roster} isCompleted={isCompleted} />
-      <PoolValueFooter roster={roster} isStarted={isStarted} />
-    </div>
-  );
-}
-
-function RosterList({
-  roster,
-  isCompleted,
-}: {
-  roster: DriverPoolRosterMember[];
-  isCompleted?: boolean;
-}) {
-  if (roster.length === 0) {
-    return (
-      <div className="p-8 text-center text-xs text-ink-secondary">
-        No passengers assigned yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-y divide-border/40">
-      {roster.map((member) => (
-        <RosterItem key={member.id} member={member} isCompleted={isCompleted} />
-      ))}
-    </div>
-  );
-}
-
-function RosterItem({
-  member,
-  isCompleted,
-}: {
-  member: DriverPoolRosterMember;
-  isCompleted?: boolean;
-}) {
-  return (
-    <div className="py-3 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
-        <RosterInitialsAvatar name={member.passengerName} />
-        <RosterPassengerInfo
-          name={member.passengerName}
-          seats={member.seats}
-          destLocationName={member.destLocationName}
-        />
-      </div>
-      <RosterFareInfo
-        farePaisa={member.farePaisa}
-        paymentMethod={member.paymentMethod}
-        paymentStatus={member.paymentStatus}
-        isCompleted={isCompleted}
-      />
-    </div>
-  );
-}
-
-function RosterInitialsAvatar({ name }: { name: string }) {
-  const initials = getInitials(name);
-
-  return (
-    <div className="size-8 rounded-full bg-surface-subtle border border-border flex items-center justify-center font-bold text-xs text-ink shrink-0">
-      {initials}
-    </div>
-  );
-}
-
-function RosterPassengerInfo({
-  name,
-  seats,
-  destLocationName,
-}: {
-  name: string;
-  seats: number;
-  destLocationName: string;
-}) {
-  return (
-    <div className="min-w-0 space-y-0.5">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="font-semibold text-sm text-ink truncate">{name}</span>
-        <span className="text-[11px] bg-surface-subtle text-ink-secondary px-1.5 py-0.2 rounded font-mono">
-          {seats} seat{seats === 1 ? "" : "s"}
-        </span>
-      </div>
-      <div className="text-xs text-ink-secondary truncate">
-        ↳ {destLocationName}
-      </div>
-    </div>
-  );
-}
-
-function RosterFareInfo({
-  farePaisa,
-  paymentMethod,
-  paymentStatus,
-  isCompleted,
-}: {
-  farePaisa: number;
-  paymentMethod: string;
-  paymentStatus?: string | null;
-  isCompleted?: boolean;
-}) {
-  const methodLabel = paymentMethod === "TESLAPAY" ? "TeslaPay" : "Cash";
-  const isPaid = paymentStatus === "PAID";
-
-  return (
-    <div className="text-right shrink-0 space-y-1">
-      <FareDisplay paisa={farePaisa} size="sm" align="right" />
-      <div className="flex items-center justify-end gap-1.5">
-        <span className="text-[11px] text-ink-secondary">{methodLabel}</span>
-        {isCompleted && (
-          <span
-            className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
-              isPaid
-                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                : "bg-amber-50 text-amber-800 border-amber-200"
-            }`}
-          >
-            {isPaid ? "Paid" : "Pending"}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PoolValueFooter({
-  roster,
-  isStarted,
-}: {
-  roster: DriverPoolRosterMember[];
-  isStarted?: boolean;
-}) {
-  const totalPaisa = roster.reduce((sum, item) => sum + item.farePaisa, 0);
-
-  return (
-    <div className="pt-3 border-t border-border/60 flex items-center justify-between">
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs font-semibold text-ink-secondary">
-          {isStarted ? "Final Pool Value" : "Total Projected Value"}
-        </span>
-        {isStarted && (
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface border border-border text-ink-secondary">
-            <Lock className="size-2.5" />
-            Locked
-          </span>
-        )}
-      </div>
-      <FareDisplay paisa={totalPaisa} size="sm" align="right" />
-    </div>
-  );
-}
-
-function getInitials(name: string): string {
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 0 || !parts[0]) return "P";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 function ActivePoolSkeleton() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-pulse">
-      <div className="lg:col-span-5">
-        <div className="bg-neutral-100 rounded-xl h-80" />
+      <div className="lg:col-span-5 space-y-4">
+        <div className="bg-white border border-border/60 rounded-xl p-6 space-y-4">
+          <div className="h-4 bg-neutral-200 rounded w-1/2" />
+          <div className="h-20 bg-neutral-100 rounded-lg" />
+          <div className="h-10 bg-neutral-100 rounded-lg" />
+        </div>
       </div>
       <div className="lg:col-span-7">
-        <div className="bg-neutral-100 rounded-xl h-80" />
+        <div className="bg-white border border-border/60 rounded-xl p-6">
+          <PassengerRosterSkeleton />
+        </div>
       </div>
     </div>
   );
