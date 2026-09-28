@@ -13,6 +13,8 @@ import {
   type User,
   type Vehicle,
   type Pool,
+  type Payment,
+  type NewPayment,
 } from '../../db/schema/index.js';
 import { Ride } from '../rides/domain/Ride.js';
 import type {
@@ -271,6 +273,68 @@ export class DriverRepository {
           isNull(passengerRides.cancelledAt)
         )
       );
+  }
+
+  async findActiveMembersForCompletion(
+    poolId: string,
+    tx?: any
+  ): Promise<Array<{
+    id: string;
+    rideRequestId: string;
+    passengerId: string;
+    farePaisa: number | null;
+    estimateFarePaisa: number;
+    paymentMethod: string;
+  }>> {
+    const client = tx ?? this.dbClient;
+    return client
+      .select({
+        id: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+        farePaisa: passengerRides.farePaisa,
+        estimateFarePaisa: rideRequests.estimateFarePaisa,
+        paymentMethod: rideRequests.paymentMethod,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .where(
+        and(
+          eq(passengerRides.poolId, poolId),
+          isNull(passengerRides.cancelledAt)
+        )
+      );
+  }
+
+  async markPassengerRidesCompleted(
+    poolId: string,
+    completedAt: Date,
+    tx?: any
+  ): Promise<void> {
+    const client = tx ?? this.dbClient;
+    await client
+      .update(passengerRides)
+      .set({
+        completedAt,
+        updatedAt: completedAt,
+      })
+      .where(
+        and(
+          eq(passengerRides.poolId, poolId),
+          isNull(passengerRides.cancelledAt)
+        )
+      );
+  }
+
+  async createPendingPayments(
+    newPayments: NewPayment[],
+    tx?: any
+  ): Promise<Payment[]> {
+    if (newPayments.length === 0) {
+      return [];
+    }
+    const client = tx ?? this.dbClient;
+    return client.insert(payments).values(newPayments).returning();
   }
 
   async withTransaction<T>(work: (tx: any) => Promise<T>): Promise<T> {

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { db } from '../../db/client.js';
 import {
@@ -8,6 +8,7 @@ import {
   locations,
   users,
   vehicles,
+  payments,
   type PassengerRide as PassengerRideRow,
   type RideRequest as RideRequestRow,
 } from '../../db/schema/index.js';
@@ -33,6 +34,7 @@ export interface ActiveRideRecord {
   updatedAt: Date;
   originalEstimateFarePaisa: number;
   paymentMethod: string;
+  paymentStatus?: string | null;
   pickupLocation: {
     id: number;
     name: string;
@@ -119,6 +121,7 @@ export class RidesRepository {
         updatedAt: passengerRides.updatedAt,
         originalEstimateFarePaisa: rideRequests.estimateFarePaisa,
         paymentMethod: rideRequests.paymentMethod,
+        paymentStatus: payments.status,
         pickupLocationId: pickupLocations.id,
         pickupLocationName: pickupLocations.name,
         pickupLocationLat: pickupLocations.lat,
@@ -140,15 +143,26 @@ export class RidesRepository {
       .innerJoin(pools, eq(passengerRides.poolId, pools.id))
       .innerJoin(pickupLocations, eq(rideRequests.pickupLocationId, pickupLocations.id))
       .innerJoin(destLocations, eq(rideRequests.destLocationId, destLocations.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
       .leftJoin(driverUsers, eq(pools.driverId, driverUsers.id))
       .leftJoin(poolVehicles, eq(pools.vehicleId, poolVehicles.id))
       .where(
         and(
           eq(passengerRides.passengerId, passengerId),
           isNull(passengerRides.cancelledAt),
-          inArray(pools.status, ['OPEN', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED'])
+          or(
+            inArray(pools.status, ['OPEN', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED']),
+            and(
+              eq(pools.status, 'COMPLETED'),
+              or(
+                isNull(payments.status),
+                eq(payments.status, 'PENDING')
+              )
+            )
+          )
         )
       )
+      .orderBy(sql`${passengerRides.createdAt} DESC`)
       .limit(1);
 
     if (!row) {
@@ -182,6 +196,7 @@ export class RidesRepository {
         updatedAt: passengerRides.updatedAt,
         originalEstimateFarePaisa: rideRequests.estimateFarePaisa,
         paymentMethod: rideRequests.paymentMethod,
+        paymentStatus: payments.status,
         pickupLocationId: pickupLocations.id,
         pickupLocationName: pickupLocations.name,
         pickupLocationLat: pickupLocations.lat,
@@ -203,6 +218,7 @@ export class RidesRepository {
       .innerJoin(pools, eq(passengerRides.poolId, pools.id))
       .innerJoin(pickupLocations, eq(rideRequests.pickupLocationId, pickupLocations.id))
       .innerJoin(destLocations, eq(rideRequests.destLocationId, destLocations.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
       .leftJoin(driverUsers, eq(pools.driverId, driverUsers.id))
       .leftJoin(poolVehicles, eq(pools.vehicleId, poolVehicles.id))
       .where(
@@ -234,6 +250,7 @@ export class RidesRepository {
     updatedAt: Date;
     originalEstimateFarePaisa: number;
     paymentMethod: string;
+    paymentStatus?: string | null;
     pickupLocationId: number;
     pickupLocationName: string;
     pickupLocationLat: string;
@@ -264,6 +281,7 @@ export class RidesRepository {
       updatedAt: row.updatedAt,
       originalEstimateFarePaisa: row.originalEstimateFarePaisa,
       paymentMethod: row.paymentMethod,
+      paymentStatus: row.paymentStatus ?? null,
       pickupLocation: {
         id: row.pickupLocationId,
         name: row.pickupLocationName,

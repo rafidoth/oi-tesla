@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, AlertCircle, Lock } from "lucide-react";
+import { RefreshCw, AlertCircle, Lock, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
@@ -12,9 +12,10 @@ import type { DriverPoolRosterMember } from "../types/driver.types";
 
 interface ActivePoolConsoleProps {
   poolId: string;
+  onResetConsole?: () => void;
 }
 
-export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
+export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleProps) {
   const { data: pool, isLoading, isError, error, refetch, isFetching } =
     useDriverPoolDetailsQuery({ poolId });
 
@@ -31,6 +32,9 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
     );
   }
 
+  const isStarted = pool.status === "STARTED" || pool.status === "COMPLETED";
+  const isCompleted = pool.status === "COMPLETED";
+
   return (
     <div className="space-y-4">
       <ConsoleTopBar
@@ -46,12 +50,20 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
               pickupLocationName={pool.pickupLocationName}
               destinationStops={pool.destinationStops}
             />
-            <CapacityMeter
-              capacity={pool.capacity}
-              occupiedSeats={pool.occupiedSeats}
-              isStarted={pool.status === "STARTED" || pool.status === "COMPLETED"}
+            {isCompleted ? (
+              <SettlementSummaryCard roster={pool.roster} />
+            ) : (
+              <CapacityMeter
+                capacity={pool.capacity}
+                occupiedSeats={pool.occupiedSeats}
+                isStarted={isStarted}
+              />
+            )}
+            <PoolLifecycleActions
+              poolId={pool.id}
+              status={pool.status}
+              onResetConsole={onResetConsole}
             />
-            <PoolLifecycleActions poolId={pool.id} status={pool.status} />
           </Card>
         </div>
 
@@ -59,7 +71,8 @@ export function ActivePoolConsole({ poolId }: ActivePoolConsoleProps) {
           <Card className="p-6 space-y-5">
             <RosterSection
               roster={pool.roster}
-              isStarted={pool.status === "STARTED" || pool.status === "COMPLETED"}
+              isStarted={isStarted}
+              isCompleted={isCompleted}
             />
           </Card>
         </div>
@@ -193,38 +206,89 @@ function CapacityMeter({
   );
 }
 
+function SettlementSummaryCard({
+  roster,
+}: {
+  roster: DriverPoolRosterMember[];
+}) {
+  const cashPaisa = roster
+    .filter((item) => item.paymentMethod === "CASH")
+    .reduce((sum, item) => sum + item.farePaisa, 0);
+  const digitalPaisa = roster
+    .filter((item) => item.paymentMethod === "TESLAPAY")
+    .reduce((sum, item) => sum + item.farePaisa, 0);
+  const pendingCount = roster.filter((item) => item.paymentStatus !== "PAID").length;
+
+  return (
+    <div className="pt-4 border-t border-border/60 space-y-3">
+      <div className="text-[11px] font-bold uppercase tracking-wider text-ink-secondary">
+        Post-Trip Settlement
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
+          <div className="text-ink-secondary text-[11px]">Cash to Collect</div>
+          <FareDisplay paisa={cashPaisa} size="sm" />
+        </div>
+        <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
+          <div className="text-ink-secondary text-[11px]">TeslaPay (Digital)</div>
+          <FareDisplay paisa={digitalPaisa} size="sm" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+        <span className="text-ink-secondary">Pending Settlements</span>
+        <span className="font-semibold text-ink">
+          {pendingCount} passenger{pendingCount === 1 ? "" : "s"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function RosterSection({
   roster,
   isStarted,
+  isCompleted,
 }: {
   roster: DriverPoolRosterMember[];
   isStarted?: boolean;
+  isCompleted?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
         <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
-          Passenger Roster
+          {isCompleted ? "Settlement Roster" : "Passenger Roster"}
         </h3>
         <span className="text-xs font-semibold tabular-nums text-ink-secondary">
           {roster.length} confirmed
         </span>
       </div>
 
-      {isStarted && (
+      {isCompleted ? (
+        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-ink">
+          <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+          <span className="font-medium">Trip Completed · Pending payment records initialized</span>
+        </div>
+      ) : isStarted ? (
         <div className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-subtle border border-border/80 text-xs text-ink-secondary">
           <Lock className="size-3.5 text-ink shrink-0" />
           <span>Fares permanently locked · Trip in motion</span>
         </div>
-      )}
+      ) : null}
 
-      <RosterList roster={roster} />
+      <RosterList roster={roster} isCompleted={isCompleted} />
       <PoolValueFooter roster={roster} isStarted={isStarted} />
     </div>
   );
 }
 
-function RosterList({ roster }: { roster: DriverPoolRosterMember[] }) {
+function RosterList({
+  roster,
+  isCompleted,
+}: {
+  roster: DriverPoolRosterMember[];
+  isCompleted?: boolean;
+}) {
   if (roster.length === 0) {
     return (
       <div className="p-8 text-center text-xs text-ink-secondary">
@@ -236,13 +300,19 @@ function RosterList({ roster }: { roster: DriverPoolRosterMember[] }) {
   return (
     <div className="divide-y divide-border/40">
       {roster.map((member) => (
-        <RosterItem key={member.id} member={member} />
+        <RosterItem key={member.id} member={member} isCompleted={isCompleted} />
       ))}
     </div>
   );
 }
 
-function RosterItem({ member }: { member: DriverPoolRosterMember }) {
+function RosterItem({
+  member,
+  isCompleted,
+}: {
+  member: DriverPoolRosterMember;
+  isCompleted?: boolean;
+}) {
   return (
     <div className="py-3 flex items-center justify-between gap-3">
       <div className="flex items-center gap-3 min-w-0">
@@ -256,6 +326,8 @@ function RosterItem({ member }: { member: DriverPoolRosterMember }) {
       <RosterFareInfo
         farePaisa={member.farePaisa}
         paymentMethod={member.paymentMethod}
+        paymentStatus={member.paymentStatus}
+        isCompleted={isCompleted}
       />
     </div>
   );
@@ -298,18 +370,34 @@ function RosterPassengerInfo({
 function RosterFareInfo({
   farePaisa,
   paymentMethod,
+  paymentStatus,
+  isCompleted,
 }: {
   farePaisa: number;
   paymentMethod: string;
+  paymentStatus?: string | null;
+  isCompleted?: boolean;
 }) {
   const methodLabel = paymentMethod === "TESLAPAY" ? "TeslaPay" : "Cash";
+  const isPaid = paymentStatus === "PAID";
 
   return (
-    <div className="text-right shrink-0">
+    <div className="text-right shrink-0 space-y-1">
       <FareDisplay paisa={farePaisa} size="sm" align="right" />
-      <span className="text-[11px] text-ink-secondary block">
-        {methodLabel}
-      </span>
+      <div className="flex items-center justify-end gap-1.5">
+        <span className="text-[11px] text-ink-secondary">{methodLabel}</span>
+        {isCompleted && (
+          <span
+            className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
+              isPaid
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-amber-50 text-amber-800 border-amber-200"
+            }`}
+          >
+            {isPaid ? "Paid" : "Pending"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

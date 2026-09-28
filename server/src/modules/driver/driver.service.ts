@@ -6,7 +6,8 @@ import { ConflictError } from '../../shared/errors/ConflictError.js';
 import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
 import { PoolStateMachine, type PoolStatus, type PoolAction } from '../pools/domain/PoolStateMachine.js';
 import type { PoolsService } from '../pools/pools.service.js';
-import type { Vehicle, Pool } from '../../db/schema/index.js';
+import type { Vehicle, Pool, Payment, NewPayment } from '../../db/schema/index.js';
+import type { LogRideEventInput } from '../events/events.types.js';
 import type {
   DriverMeResponse,
   UpdateDriverStatusResponse,
@@ -234,8 +235,18 @@ export class DriverService {
     });
   }
 
-  async completePool(driverId: string, poolId: string) {
-    return this.transitionPoolLifecycle(driverId, poolId, 'complete');
+  async completePool(
+    driverId: string,
+    poolId: string
+  ): Promise<{ success: boolean; poolId: string; status: PoolStatus }> {
+    await this.assertDriverExists(driverId);
+    return await this.driverRepo.withTransaction(async (tx) => {
+      const pool = await this.findAndValidateDriverPool(poolId, driverId, tx);
+      this.assertPoolIsStarted(pool.status);
+      await this.executePoolTransition(poolId, 'complete', driverId, tx, pool.status as PoolStatus);
+      await this.settlePoolAndInitializePayments(tx, pool, driverId);
+      return { success: true, poolId, status: 'COMPLETED' };
+    });
   }
 
   async transitionPoolLifecycle(
@@ -271,6 +282,15 @@ export class DriverService {
       throw new InvalidTransitionError(
         'INVALID_STATE_TRANSITION',
         `Cannot start trip when pool is in status ${status}`
+      );
+    }
+  }
+
+  private assertPoolIsStarted(status: string): void {
+    if (status !== 'STARTED') {
+      throw new InvalidTransitionError(
+        'INVALID_STATE_TRANSITION',
+        `Cannot complete trip when pool is in status ${status}`
       );
     }
   }
@@ -354,6 +374,146 @@ export class DriverService {
         tx
       );
     }
+  }
+
+  private async settlePoolAndInitializePayments(
+    tx: any,
+    pool: Pool,
+    driverId: string
+  ): Promise<void> {
+    const completedAt = new Date();
+    const members = await this.driverRepo.findActiveMembersForCompletion(pool.id, tx);
+    await this.driverRepo.markPassengerRidesCompleted(pool.id, completedAt, tx);
+    const createdPayments = await this.generatePendingPayments(tx, members, completedAt);
+    await this.recordCompletionAuditEvents(tx, pool.id, driverId, members, completedAt);
+    await this.recordPaymentAuditEvents(tx, pool.id, members, createdPayments, completedAt);
+  }
+
+  private async generatePendingPayments(
+    tx: any,
+    members: Array<{ id: string; farePaisa: number | null; estimateFarePaisa: number; paymentMethod: string }>,
+    completedAt: Date
+  ): Promise<Payment[]> {
+    const records = members.map((m) => this.buildNewPaymentRecord(m, completedAt));
+    return this.driverRepo.createPendingPayments(records, tx);
+  }
+
+  private buildNewPaymentRecord(
+    member: { id: string; farePaisa: number | null; estimateFarePaisa: number; paymentMethod: string },
+    completedAt: Date
+  ): NewPayment {
+    return {
+      passengerRideId: member.id,
+      method: member.paymentMethod,
+      amountPaisa: member.farePaisa ?? member.estimateFarePaisa,
+      status: 'PENDING',
+      createdAt: completedAt,
+      updatedAt: completedAt,
+    };
+  }
+
+  private async recordCompletionAuditEvents(
+    tx: any,
+    poolId: string,
+    driverId: string,
+    members: Array<{ id: string; passengerId: string; rideRequestId: string; farePaisa: number | null; estimateFarePaisa: number }>,
+    completedAt: Date
+  ): Promise<void> {
+    await this.logPoolCompleteEvent(tx, poolId, driverId, members.length, completedAt);
+    await this.logMemberCompleteEvents(tx, poolId, members, completedAt);
+  }
+
+  private async logPoolCompleteEvent(
+    tx: any,
+    poolId: string,
+    driverId: string,
+    memberCount: number,
+    completedAt: Date
+  ): Promise<void> {
+    await this.eventsService.logRideEvent(
+      {
+        event: 'RIDE_COMPLETED',
+        actorType: 'DRIVER',
+        actorId: driverId,
+        poolId,
+        fromState: 'STARTED',
+        toState: 'COMPLETED',
+        payload: {
+          completedAt: completedAt.toISOString(),
+          memberCount,
+        },
+      },
+      tx
+    );
+  }
+
+  private async logMemberCompleteEvents(
+    tx: any,
+    poolId: string,
+    members: Array<{ id: string; passengerId: string; rideRequestId: string; farePaisa: number | null; estimateFarePaisa: number }>,
+    completedAt: Date
+  ): Promise<void> {
+    for (const member of members) {
+      await this.eventsService.logRideEvent(this.buildMemberCompleteEvent(poolId, member, completedAt), tx);
+    }
+  }
+
+  private buildMemberCompleteEvent(
+    poolId: string,
+    member: { id: string; passengerId: string; rideRequestId: string; farePaisa: number | null; estimateFarePaisa: number },
+    completedAt: Date
+  ): LogRideEventInput {
+    return {
+      event: 'RIDE_COMPLETED',
+      actorType: 'SYSTEM',
+      actorId: member.passengerId,
+      poolId,
+      passengerRideId: member.id,
+      rideRequestId: member.rideRequestId,
+      fromState: 'STARTED',
+      toState: 'COMPLETED',
+      payload: {
+        farePaisa: member.farePaisa ?? member.estimateFarePaisa,
+        completedAt: completedAt.toISOString(),
+      },
+    };
+  }
+
+  private async recordPaymentAuditEvents(
+    tx: any,
+    poolId: string,
+    members: Array<{ id: string; passengerId: string; rideRequestId: string; farePaisa: number | null; estimateFarePaisa: number; paymentMethod: string }>,
+    payments: Payment[],
+    completedAt: Date
+  ): Promise<void> {
+    const paymentMap = new Map(payments.map((p) => [p.passengerRideId, p]));
+    for (const member of members) {
+      const payment = paymentMap.get(member.id);
+      await this.eventsService.logRideEvent(this.buildPaymentPendingEvent(poolId, member, payment, completedAt), tx);
+    }
+  }
+
+  private buildPaymentPendingEvent(
+    poolId: string,
+    member: { id: string; passengerId: string; rideRequestId: string; farePaisa: number | null; estimateFarePaisa: number; paymentMethod: string },
+    payment: Payment | undefined,
+    completedAt: Date
+  ): LogRideEventInput {
+    return {
+      event: 'PAYMENT_PENDING',
+      actorType: 'SYSTEM',
+      actorId: member.passengerId,
+      poolId,
+      passengerRideId: member.id,
+      rideRequestId: member.rideRequestId,
+      payload: {
+        paymentId: payment?.id,
+        amountPaisa: member.farePaisa ?? member.estimateFarePaisa,
+        method: member.paymentMethod,
+        status: 'PENDING',
+        initializedAt: completedAt.toISOString(),
+      },
+    };
   }
 
   private async recordArrivalAuditEvent(

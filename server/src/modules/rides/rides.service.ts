@@ -292,6 +292,7 @@ export class RidesService {
           : record.originalEstimateFarePaisa,
       originalEstimateFarePaisa: record.originalEstimateFarePaisa,
       paymentMethod: record.paymentMethod,
+      paymentStatus: record.paymentStatus ?? null,
       pickupLocation: {
         id: record.pickupLocation.id,
         name: record.pickupLocation.name,

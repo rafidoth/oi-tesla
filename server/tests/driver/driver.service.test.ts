@@ -23,6 +23,9 @@ describe('DriverService Unit Tests', () => {
     findActiveRosterForPool: ReturnType<typeof vi.fn>;
     updatePoolStatus: ReturnType<typeof vi.fn>;
     withTransaction: ReturnType<typeof vi.fn>;
+    findActiveMembersForCompletion: ReturnType<typeof vi.fn>;
+    markPassengerRidesCompleted: ReturnType<typeof vi.fn>;
+    createPendingPayments: ReturnType<typeof vi.fn>;
   };
   let mockEventsService: {
     logRideEvent: ReturnType<typeof vi.fn>;
@@ -44,6 +47,9 @@ describe('DriverService Unit Tests', () => {
       findActiveRosterForPool: vi.fn(),
       updatePoolStatus: vi.fn().mockResolvedValue(undefined),
       withTransaction: vi.fn((callback) => callback({})),
+      findActiveMembersForCompletion: vi.fn().mockResolvedValue([]),
+      markPassengerRidesCompleted: vi.fn().mockResolvedValue(undefined),
+      createPendingPayments: vi.fn().mockResolvedValue([]),
     };
     mockEventsService = {
       logRideEvent: vi.fn().mockResolvedValue({} as any),
@@ -1037,6 +1043,40 @@ describe('DriverService Unit Tests', () => {
         driverId,
         status: 'STARTED',
       });
+      mockDriverRepo.findActiveMembersForCompletion.mockResolvedValue([
+        {
+          id: 'member-ride-1',
+          rideRequestId: 'req-1',
+          passengerId: 'p-1',
+          farePaisa: 8334,
+          estimateFarePaisa: 15000,
+          paymentMethod: 'TESLAPAY',
+        },
+        {
+          id: 'member-ride-2',
+          rideRequestId: 'req-2',
+          passengerId: 'p-2',
+          farePaisa: 3333,
+          estimateFarePaisa: 9000,
+          paymentMethod: 'CASH',
+        },
+      ]);
+      mockDriverRepo.createPendingPayments.mockResolvedValue([
+        {
+          id: 'pay-1',
+          passengerRideId: 'member-ride-1',
+          method: 'TESLAPAY',
+          amountPaisa: 8334,
+          status: 'PENDING',
+        },
+        {
+          id: 'pay-2',
+          passengerRideId: 'member-ride-2',
+          method: 'CASH',
+          amountPaisa: 3333,
+          status: 'PENDING',
+        },
+      ]);
 
       const response = await driverService.completePool(driverId, poolId);
 
@@ -1045,7 +1085,66 @@ describe('DriverService Unit Tests', () => {
         poolId,
         status: 'COMPLETED',
       });
-      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'COMPLETED');
+      expect(mockDriverRepo.updatePoolStatus).toHaveBeenCalledWith(poolId, 'COMPLETED', expect.anything());
+      expect(mockDriverRepo.markPassengerRidesCompleted).toHaveBeenCalledWith(
+        poolId,
+        expect.any(Date),
+        expect.anything()
+      );
+      expect(mockDriverRepo.createPendingPayments).toHaveBeenCalledWith(
+        [
+          {
+            passengerRideId: 'member-ride-1',
+            method: 'TESLAPAY',
+            amountPaisa: 8334,
+            status: 'PENDING',
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+          {
+            passengerRideId: 'member-ride-2',
+            method: 'CASH',
+            amountPaisa: 3333,
+            status: 'PENDING',
+            createdAt: expect.any(Date),
+            updatedAt: expect.any(Date),
+          },
+        ],
+        expect.anything()
+      );
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        {
+          event: 'RIDE_COMPLETED',
+          actorType: 'DRIVER',
+          actorId: driverId,
+          poolId,
+          fromState: 'STARTED',
+          toState: 'COMPLETED',
+          payload: {
+            completedAt: expect.any(String),
+            memberCount: 2,
+          },
+        },
+        expect.anything()
+      );
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        {
+          event: 'PAYMENT_PENDING',
+          actorType: 'SYSTEM',
+          actorId: 'p-1',
+          poolId,
+          passengerRideId: 'member-ride-1',
+          rideRequestId: 'req-1',
+          payload: {
+            paymentId: 'pay-1',
+            amountPaisa: 8334,
+            method: 'TESLAPAY',
+            status: 'PENDING',
+            initializedAt: expect.any(String),
+          },
+        },
+        expect.anything()
+      );
     });
 
     it('rejects out-of-order transition (start when MATCHED) with InvalidTransitionError', async () => {
@@ -1093,6 +1192,30 @@ describe('DriverService Unit Tests', () => {
 
       await expect(driverService.completePool(driverId, poolId)).rejects.toThrow(
         InvalidTransitionError
+      );
+    });
+
+    it('rejects complete transition when pool is MATCHED or DRIVER_ARRIVED', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId,
+        status: 'DRIVER_ARRIVED',
+      });
+
+      await expect(driverService.completePool(driverId, poolId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('rejects complete transition with ForbiddenError if calling driver is not pool owner', async () => {
+      mockDriverRepo.findPoolById.mockResolvedValue({
+        id: poolId,
+        driverId: 'another-driver',
+        status: 'STARTED',
+      });
+
+      await expect(driverService.completePool(driverId, poolId)).rejects.toThrow(
+        ForbiddenError
       );
     });
   });

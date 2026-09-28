@@ -9,6 +9,7 @@ import type { PoolLifecycleAction } from "../types/driver.types";
 interface PoolLifecycleActionsProps {
   poolId: string;
   status: string;
+  onResetConsole?: () => void;
 }
 
 interface LifecycleActionConfig {
@@ -19,12 +20,16 @@ interface LifecycleActionConfig {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export function PoolLifecycleActions({ poolId, status }: PoolLifecycleActionsProps) {
+export function PoolLifecycleActions({
+  poolId,
+  status,
+  onResetConsole,
+}: PoolLifecycleActionsProps) {
   const { mutate, isPending } = usePoolTransitionMutation();
   const actionConfig = getLifecycleActionConfig(status);
 
   if (!actionConfig) {
-    return <TerminalStateNotice status={status} />;
+    return <TerminalStateNotice status={status} onResetConsole={onResetConsole} />;
   }
 
   const Icon = actionConfig.icon;
@@ -84,7 +89,7 @@ function getLifecycleActionConfig(status: string): LifecycleActionConfig | null 
         action: "complete",
         label: "Complete Trip",
         description: "Arrived at final destination. Initialize fare settlement.",
-        buttonClassName: "bg-black text-white hover:bg-black/90",
+        buttonClassName: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
         icon: CheckCircle2,
       };
     default:
@@ -92,12 +97,30 @@ function getLifecycleActionConfig(status: string): LifecycleActionConfig | null 
   }
 }
 
-function TerminalStateNotice({ status }: { status: string }) {
+function TerminalStateNotice({
+  status,
+  onResetConsole,
+}: {
+  status: string;
+  onResetConsole?: () => void;
+}) {
   if (status === "COMPLETED") {
     return (
-      <div className="pt-4 border-t border-border/60 flex items-center gap-2 text-xs text-ink-secondary bg-surface-subtle/50 p-3 rounded-lg">
-        <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
-        <span>Trip completed. Passengers arrived at destinations.</span>
+      <div className="pt-4 border-t border-border/60 space-y-3">
+        <div className="flex items-center gap-2 text-xs text-ink bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
+          <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+          <span className="font-medium">Trip completed. All fares initialized for settlement.</span>
+        </div>
+        {onResetConsole && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onResetConsole}
+            className="w-full py-2.5 font-semibold text-xs rounded-lg border-border hover:bg-surface-subtle transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Return to Open Feed
+          </Button>
+        )}
       </div>
     );
   }

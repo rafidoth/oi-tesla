@@ -16,8 +16,18 @@ import {
 export default function DriverDashboardPage() {
   const { data, isLoading, isError, error, refetch } = useDriverMeQuery();
 
+  const [viewingCompletedPoolId, setViewingCompletedPoolId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (data?.activePool?.id) {
+      setViewingCompletedPoolId(data.activePool.id);
+    }
+  }, [data?.activePool?.id]);
+
+  const activePoolId = data?.activePool?.id ?? viewingCompletedPoolId;
+  const hasActivePool = Boolean(activePoolId);
   const isOnline = data?.vehicle?.status === "ONLINE";
-  const hasActivePool = Boolean(data?.activePool);
+  const isOffline = data?.vehicle?.status === "OFFLINE";
 
   const {
     data: openPools,
@@ -64,8 +74,6 @@ export default function DriverDashboardPage() {
     },
   });
 
-  const isOffline = data?.vehicle && data.vehicle.status === "OFFLINE";
-
   const handleToggleStatus = (nextStatus: "ONLINE" | "OFFLINE") => {
     updateStatusMutation.mutate({ status: nextStatus });
   };
@@ -90,8 +98,15 @@ export default function DriverDashboardPage() {
         isUpdatingStatus={updateStatusMutation.isPending}
       />
 
-      {hasActivePool && data?.activePool ? (
-        <ActivePoolConsole poolId={data.activePool.id} />
+      {hasActivePool && activePoolId ? (
+        <ActivePoolConsole
+          poolId={activePoolId}
+          onResetConsole={() => {
+            setViewingCompletedPoolId(null);
+            refetch();
+            refetchOpenPools();
+          }}
+        />
       ) : (
         <>
           {isOffline && (
