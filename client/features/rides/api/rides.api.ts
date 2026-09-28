@@ -7,6 +7,7 @@ import type {
   ActiveRideDetailsDto,
   CancelRideDto,
   CancelRideResponseDto,
+  PayRideResponseDto,
 } from "../types/rides.types";
 
 export async function fetchFareEstimate(
@@ -53,12 +54,22 @@ export async function cancelRide(
   return response.data;
 }
 
+export async function payTeslaPayRide(
+  rideId: string
+): Promise<PayRideResponseDto> {
+  const endpoint = `/rides/${rideId}/pay`;
+  const url = baseUrlWrapper(endpoint);
+  const response = await apiClient.post<PayRideResponseDto>(url);
+  return response.data;
+}
+
 export const ridesApi = {
   fetchFareEstimate,
   createRide,
   fetchActiveRide,
   fetchRideById,
   cancelRide,
+  payTeslaPayRide,
 };
 
 export default ridesApi;

@@ -85,3 +85,16 @@ export interface CancelRideResponseDto {
   poolRemainingMembers: number;
   poolStatus: string;
 }
+
+export interface PayRideResponseDto {
+  success: boolean;
+  payment: {
+    id: string;
+    passengerRideId: string;
+    method: string;
+    amountPaisa: number;
+    status: string;
+    paidAt: Date | string | null;
+    markedBy: string | null;
+  };
+}

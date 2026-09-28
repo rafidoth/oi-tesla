@@ -8,17 +8,20 @@ import type { EventsService } from '../events/events.service.js';
 import { ConflictError } from '../../shared/errors/ConflictError.js';
 import { NotFoundError } from '../../shared/errors/NotFoundError.js';
 import { InvalidTransitionError } from '../../shared/errors/InvalidTransitionError.js';
+import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
 import { NOMINAL_POOL_CAPACITY } from '../../config/constants.js';
 import { Ride } from './domain/Ride.js';
+import type { Payment } from '../../db/schema/index.js';
 import type {
   RequestRideDto,
   EstimateResponseDto,
   RideBookingResponseDto,
   ActiveRideDetailsDto,
   CancelRideResponseDto,
+  PayRideResponseDto,
 } from './rides.types.js';
 import type { CreateRideInput, CancelRideInput } from './rides.schema.js';
-import type { ActiveRideRecord } from './rides.repository.js';
+import type { ActiveRideRecord, PassengerRideTeslaPaySettlementInfo } from './rides.repository.js';
 
 type DbType = typeof db;
 
@@ -323,6 +326,126 @@ export class RidesService {
       createdAt: ride.createdAt,
       cancelledAt: ride.cancelledAt,
       completedAt: ride.completedAt,
+    };
+  }
+
+  async payWithTeslaPay(rideId: string, passengerId: string): Promise<PayRideResponseDto> {
+    return await this.db.transaction(async (tx) => {
+      const info = await this.findAndValidateTeslaPayRide(rideId, passengerId, tx);
+      return await this.executeTeslaPaySettlement(info, passengerId, tx);
+    });
+  }
+
+  private async findAndValidateTeslaPayRide(
+    rideId: string,
+    passengerId: string,
+    tx: any
+  ): Promise<PassengerRideTeslaPaySettlementInfo> {
+    const info = await this.ridesRepo.findRideForTeslaPaySettlement(rideId, tx);
+    this.assertRideEligibility(info, passengerId);
+    this.assertPaymentPending(info!);
+    return info!;
+  }
+
+  private assertRideEligibility(
+    info: PassengerRideTeslaPaySettlementInfo | null,
+    passengerId: string
+  ): void {
+    if (!info) {
+      throw new NotFoundError('RIDE_NOT_FOUND', 'Ride not found');
+    }
+    this.assertRideOwnership(info, passengerId);
+    this.assertRideCompleted(info);
+    this.assertPaymentMethodIsTeslaPay(info);
+  }
+
+  private assertRideOwnership(info: PassengerRideTeslaPaySettlementInfo, passengerId: string): void {
+    if (info.passengerId !== passengerId) {
+      throw new ForbiddenError('Access forbidden: ride does not belong to passenger');
+    }
+  }
+
+  private assertRideCompleted(info: PassengerRideTeslaPaySettlementInfo): void {
+    if (!info.completedAt) {
+      throw new InvalidTransitionError('RIDE_NOT_COMPLETED', 'Ride is not completed yet');
+    }
+  }
+
+  private assertPaymentMethodIsTeslaPay(info: PassengerRideTeslaPaySettlementInfo): void {
+    if (info.paymentMethod !== 'TESLAPAY') {
+      throw new InvalidTransitionError(
+        'INVALID_PAYMENT_METHOD',
+        'Only TeslaPay payments can be digitally settled'
+      );
+    }
+  }
+
+  private assertPaymentPending(info: PassengerRideTeslaPaySettlementInfo): void {
+    if (!info.paymentId) {
+      throw new NotFoundError('PAYMENT_NOT_FOUND', 'Payment record not found for this ride');
+    }
+    if (info.paymentStatus === 'PAID') {
+      throw new ConflictError('PAYMENT_ALREADY_PAID', 'Payment is already paid');
+    }
+    if (info.paymentStatus !== 'PENDING') {
+      throw new InvalidTransitionError('INVALID_PAYMENT_STATUS', 'Payment is not in pending status');
+    }
+  }
+
+  private async executeTeslaPaySettlement(
+    info: PassengerRideTeslaPaySettlementInfo,
+    passengerId: string,
+    tx: any
+  ): Promise<PayRideResponseDto> {
+    const paidAt = new Date();
+    const updated = await this.ridesRepo.markTeslaPayPaymentAsPaid(info.paymentId!, passengerId, paidAt, tx);
+    if (!updated) {
+      throw new ConflictError('PAYMENT_ALREADY_PAID', 'Payment is already paid');
+    }
+    await this.recordTeslaPayAuditEvent(info, updated, passengerId, tx);
+    return this.formatPayRideResponse(updated);
+  }
+
+  private async recordTeslaPayAuditEvent(
+    info: PassengerRideTeslaPaySettlementInfo,
+    payment: Payment,
+    passengerId: string,
+    tx: any
+  ): Promise<void> {
+    await this.eventsService.logRideEvent(
+      {
+        event: 'PAYMENT_COMPLETED',
+        actorType: 'PASSENGER',
+        actorId: passengerId,
+        poolId: info.poolId,
+        passengerRideId: info.passengerRideId,
+        rideRequestId: info.rideRequestId,
+        fromState: 'PENDING',
+        toState: 'PAID',
+        payload: {
+          paymentId: payment.id,
+          method: payment.method,
+          amountPaisa: payment.amountPaisa,
+          markedBy: passengerId,
+          paidAt: payment.paidAt,
+        },
+      },
+      tx
+    );
+  }
+
+  private formatPayRideResponse(payment: Payment): PayRideResponseDto {
+    return {
+      success: true,
+      payment: {
+        id: payment.id,
+        passengerRideId: payment.passengerRideId,
+        method: payment.method,
+        amountPaisa: payment.amountPaisa,
+        status: payment.status,
+        paidAt: payment.paidAt,
+        markedBy: payment.markedBy,
+      },
     };
   }
 }

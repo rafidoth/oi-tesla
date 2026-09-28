@@ -9,11 +9,26 @@ import {
   users,
   vehicles,
   payments,
+  type Payment,
   type PassengerRide as PassengerRideRow,
   type RideRequest as RideRequestRow,
 } from '../../db/schema/index.js';
 
 export type { PassengerRideRow, RideRequestRow };
+
+export interface PassengerRideTeslaPaySettlementInfo {
+  passengerRideId: string;
+  rideRequestId: string;
+  passengerId: string;
+  poolId: string;
+  completedAt: Date | null;
+  paymentId: string | null;
+  paymentMethod: string;
+  paymentAmountPaisa: number | null;
+  paymentStatus: string | null;
+  paymentPaidAt: Date | null;
+  paymentMarkedBy: string | null;
+}
 
 const pickupLocations = alias(locations, 'pickup_loc');
 const destLocations = alias(locations, 'dest_loc');
@@ -445,6 +460,60 @@ export class RidesRepository {
       );
 
     return result ? Number(result.count) : 0;
+  }
+
+  async findRideForTeslaPaySettlement(
+    rideId: string,
+    tx?: any
+  ): Promise<PassengerRideTeslaPaySettlementInfo | null> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const [row] = await executor
+      .select({
+        passengerRideId: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+        poolId: passengerRides.poolId,
+        completedAt: passengerRides.completedAt,
+        paymentId: payments.id,
+        paymentMethod: rideRequests.paymentMethod,
+        paymentAmountPaisa: payments.amountPaisa,
+        paymentStatus: payments.status,
+        paymentPaidAt: payments.paidAt,
+        paymentMarkedBy: payments.markedBy,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
+      .where(eq(passengerRides.id, rideId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async markTeslaPayPaymentAsPaid(
+    paymentId: string,
+    passengerId: string,
+    paidAt: Date,
+    tx?: any
+  ): Promise<Payment | null> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const [updated] = await executor
+      .update(payments)
+      .set({
+        status: 'PAID',
+        paidAt,
+        markedBy: passengerId,
+        updatedAt: paidAt,
+      })
+      .where(
+        and(
+          eq(payments.id, paymentId),
+          eq(payments.status, 'PENDING')
+        )
+      )
+      .returning();
+
+    return updated ?? null;
   }
 }
 

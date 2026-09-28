@@ -7,12 +7,16 @@ import type { PoolsService } from '../../src/modules/pools/pools.service.js';
 import type { EventsService } from '../../src/modules/events/events.service.js';
 import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
 import { ConflictError } from '../../src/shared/errors/ConflictError.js';
+import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
+import { ForbiddenError } from '../../src/shared/errors/ForbiddenError.js';
 
 describe('RidesService Unit Tests', () => {
   let mockRidesRepo: {
     findActiveRideByPassengerId: ReturnType<typeof vi.fn>;
     createRideRequest: ReturnType<typeof vi.fn>;
     createPassengerRide: ReturnType<typeof vi.fn>;
+    findRideForTeslaPaySettlement: ReturnType<typeof vi.fn>;
+    markTeslaPayPaymentAsPaid: ReturnType<typeof vi.fn>;
   };
   let mockLocationsService: {
     getDistance: ReturnType<typeof vi.fn>;
@@ -36,6 +40,8 @@ describe('RidesService Unit Tests', () => {
       findActiveRideByPassengerId: vi.fn(),
       createRideRequest: vi.fn(),
       createPassengerRide: vi.fn(),
+      findRideForTeslaPaySettlement: vi.fn(),
+      markTeslaPayPaymentAsPaid: vi.fn(),
     };
     mockLocationsService = {
       getDistance: vi.fn(),
@@ -326,6 +332,156 @@ describe('RidesService Unit Tests', () => {
 
       expect(mockPoolsService.joinPoolWithFallback).not.toHaveBeenCalled();
       expect(mockRidesRepo.createRideRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('payWithTeslaPay', () => {
+    const passengerId = 'passenger-uuid-1';
+    const rideId = 'ride-uuid-1';
+
+    const validTeslaPayRideInfo = {
+      passengerRideId: rideId,
+      rideRequestId: 'request-uuid-1',
+      passengerId,
+      poolId: 'pool-uuid-1',
+      completedAt: new Date('2026-09-28T08:00:00Z'),
+      paymentId: 'pay-uuid-1',
+      paymentMethod: 'TESLAPAY',
+      paymentAmountPaisa: 15000,
+      paymentStatus: 'PENDING',
+      paymentPaidAt: null,
+      paymentMarkedBy: null,
+    };
+
+    const paidPaymentRecord = {
+      id: 'pay-uuid-1',
+      passengerRideId: rideId,
+      method: 'TESLAPAY',
+      amountPaisa: 15000,
+      status: 'PAID',
+      paidAt: new Date('2026-09-28T08:05:00Z'),
+      markedBy: passengerId,
+      createdAt: new Date('2026-09-28T08:00:00Z'),
+      updatedAt: new Date('2026-09-28T08:05:00Z'),
+    };
+
+    it('successfully settles pending TeslaPay payment and records audit event', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({ ...validTeslaPayRideInfo });
+      mockRidesRepo.markTeslaPayPaymentAsPaid.mockResolvedValue({ ...paidPaymentRecord });
+
+      const result = await ridesService.payWithTeslaPay(rideId, passengerId);
+
+      expect(result.success).toBe(true);
+      expect(result.payment.status).toBe('PAID');
+      expect(result.payment.markedBy).toBe(passengerId);
+      expect(mockRidesRepo.markTeslaPayPaymentAsPaid).toHaveBeenCalledWith(
+        'pay-uuid-1',
+        passengerId,
+        expect.any(Date),
+        mockTx
+      );
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'PAYMENT_COMPLETED',
+          actorType: 'PASSENGER',
+          actorId: passengerId,
+          poolId: 'pool-uuid-1',
+          passengerRideId: rideId,
+          rideRequestId: 'request-uuid-1',
+          fromState: 'PENDING',
+          toState: 'PAID',
+          payload: expect.objectContaining({
+            paymentId: 'pay-uuid-1',
+            method: 'TESLAPAY',
+            amountPaisa: 15000,
+            markedBy: passengerId,
+          }),
+        }),
+        mockTx
+      );
+    });
+
+    it('throws NotFoundError when ride does not exist', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue(null);
+
+      await expect(ridesService.payWithTeslaPay('non-existent-ride', passengerId)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('throws ForbiddenError when caller is not the ride owner', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        passengerId: 'different-passenger',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ForbiddenError
+      );
+    });
+
+    it('throws InvalidTransitionError when ride is not completed', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        completedAt: null,
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws InvalidTransitionError when payment method is not TESLAPAY', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentMethod: 'CASH',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws NotFoundError when payment record is missing', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentId: null,
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('throws ConflictError when payment is already paid', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentStatus: 'PAID',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ConflictError
+      );
+    });
+
+    it('throws InvalidTransitionError when payment status is not PENDING', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentStatus: 'FAILED',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws ConflictError on concurrent update race condition', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({ ...validTeslaPayRideInfo });
+      mockRidesRepo.markTeslaPayPaymentAsPaid.mockResolvedValue(null);
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ConflictError
+      );
     });
   });
 });

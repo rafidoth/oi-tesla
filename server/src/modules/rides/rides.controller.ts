@@ -19,11 +19,7 @@ export class RidesController {
 
   async requestRide(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const passengerId = req.user?.sub || req.user?.id;
-      if (!passengerId) {
-        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
-      }
-
+      const passengerId = this.extractPassengerId(req);
       const dto = req.body as CreateRideInput;
       const booking = await this.ridesService.requestRide(passengerId, dto);
       res.status(201).json(booking);
@@ -34,11 +30,7 @@ export class RidesController {
 
   async getActiveRide(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const passengerId = req.user?.sub || req.user?.id;
-      if (!passengerId) {
-        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
-      }
-
+      const passengerId = this.extractPassengerId(req);
       const activeRide = await this.ridesService.getActiveRide(passengerId);
       res.status(200).json(activeRide);
     } catch (err) {
@@ -48,11 +40,7 @@ export class RidesController {
 
   async getRideById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const passengerId = req.user?.sub || req.user?.id;
-      if (!passengerId) {
-        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
-      }
-
+      const passengerId = this.extractPassengerId(req);
       const ride = await this.ridesService.getRideById(req.params.id, passengerId);
       res.status(200).json(ride);
     } catch (err) {
@@ -62,17 +50,31 @@ export class RidesController {
 
   async cancelRide(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const passengerId = req.user?.sub || req.user?.id;
-      if (!passengerId) {
-        throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
-      }
-
+      const passengerId = this.extractPassengerId(req);
       const input = req.body as CancelRideInput;
       const result = await this.ridesService.cancelRide(req.params.id, passengerId, input);
       res.status(200).json(result);
     } catch (err) {
       next(err);
     }
+  }
+
+  async payRide(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const passengerId = this.extractPassengerId(req);
+      const result = await this.ridesService.payWithTeslaPay(req.params.id, passengerId);
+      res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  private extractPassengerId(req: AuthenticatedRequest): string {
+    const passengerId = req.user?.sub || req.user?.id;
+    if (!passengerId) {
+      throw new UnauthorizedError('UNAUTHENTICATED', 'User is not authenticated');
+    }
+    return passengerId;
   }
 }
 
