@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { db } from '../../db/client.js';
 import {
@@ -24,6 +24,7 @@ import type {
   OpenPoolDestinationStop,
   DriverPoolRosterMember,
   PassengerRideCashSettlementInfo,
+  DriverPoolHistoryItem,
 } from './driver.types.js';
 
 
@@ -551,6 +552,126 @@ export class DriverRepository {
       .returning();
 
     return updated ?? null;
+  }
+
+  async findDriverPoolHistory(
+    driverId: string,
+    status?: string
+  ): Promise<DriverPoolHistoryItem[]> {
+    const conditions = [eq(pools.driverId, driverId)];
+    if (status) {
+      conditions.push(eq(pools.status, status));
+    }
+    const poolRows = await this.dbClient
+      .select({
+        id: pools.id,
+        pickupLocationId: pools.pickupLocationId,
+        pickupLocationName: locations.name,
+        status: pools.status,
+        capacity: pools.capacity,
+        occupiedSeats: pools.occupiedSeats,
+        createdAt: pools.createdAt,
+        updatedAt: pools.updatedAt,
+      })
+      .from(pools)
+      .innerJoin(locations, eq(pools.pickupLocationId, locations.id))
+      .where(and(...conditions))
+      .orderBy(desc(pools.createdAt));
+
+    if (poolRows.length === 0) return [];
+    return await this.enrichDriverPoolsHistory(poolRows);
+  }
+
+  private async enrichDriverPoolsHistory(
+    poolRows: any[]
+  ): Promise<DriverPoolHistoryItem[]> {
+    const poolIds = poolRows.map((p) => p.id);
+    const memberRows = await this.findHistoricalMembersForPools(poolIds);
+    const { stopsByPoolId, earningsByPoolId, countsByPoolId } =
+      this.buildHistoryAggregates(memberRows);
+    return poolRows.map((pool) =>
+      this.mapHistoryItem(pool, stopsByPoolId, earningsByPoolId, countsByPoolId)
+    );
+  }
+
+  private async findHistoricalMembersForPools(poolIds: string[]) {
+    return this.dbClient
+      .select({
+        poolId: passengerRides.poolId,
+        farePaisa: passengerRides.farePaisa,
+        destLocationId: rideRequests.destLocationId,
+        destLocationName: locations.name,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .innerJoin(locations, eq(rideRequests.destLocationId, locations.id))
+      .where(
+        and(
+          inArray(passengerRides.poolId, poolIds),
+          isNull(passengerRides.cancelledAt)
+        )
+      );
+  }
+
+  private buildHistoryAggregates(memberRows: any[]) {
+    const stopsByPoolId = new Map<string, Map<number, string>>();
+    const earningsByPoolId = new Map<string, number>();
+    const countsByPoolId = new Map<string, number>();
+
+    for (const member of memberRows) {
+      this.accumulateMemberStop(
+        stopsByPoolId,
+        member.poolId,
+        member.destLocationId,
+        member.destLocationName
+      );
+      earningsByPoolId.set(
+        member.poolId,
+        (earningsByPoolId.get(member.poolId) ?? 0) + (member.farePaisa ?? 0)
+      );
+      countsByPoolId.set(
+        member.poolId,
+        (countsByPoolId.get(member.poolId) ?? 0) + 1
+      );
+    }
+    return { stopsByPoolId, earningsByPoolId, countsByPoolId };
+  }
+
+  private accumulateMemberStop(
+    stops: Map<string, Map<number, string>>,
+    poolId: string,
+    destLocationId: number,
+    destLocationName: string
+  ): void {
+    let stopMap = stops.get(poolId);
+    if (!stopMap) {
+      stopMap = new Map<number, string>();
+      stops.set(poolId, stopMap);
+    }
+    stopMap.set(destLocationId, destLocationName);
+  }
+
+  private mapHistoryItem(
+    pool: any,
+    stops: Map<string, Map<number, string>>,
+    earnings: Map<string, number>,
+    counts: Map<string, number>
+  ): DriverPoolHistoryItem {
+    return {
+      id: pool.id,
+      pickupLocationId: pool.pickupLocationId,
+      pickupLocationName: pool.pickupLocationName,
+      status: pool.status,
+      capacity: pool.capacity,
+      occupiedSeats: pool.occupiedSeats,
+      passengerCount: counts.get(pool.id) ?? 0,
+      totalEarningsPaisa: earnings.get(pool.id) ?? 0,
+      destinationStops: Array.from(stops.get(pool.id)?.entries() ?? []).map(
+        ([locationId, locationName]) => ({ locationId, locationName })
+      ),
+      createdAt: pool.createdAt,
+      updatedAt: pool.updatedAt,
+    };
   }
 }
 

@@ -50,7 +50,8 @@ export class DriverController {
         return;
       }
 
-      res.status(200).json([]);
+      const history = await this.driverService.getDriverPoolHistory(driverId, status);
+      res.status(200).json(history);
     } catch (err) {
       next(err);
     }

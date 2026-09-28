@@ -19,6 +19,7 @@ describe('DriverController Unit Tests', () => {
     startPool: ReturnType<typeof vi.fn>;
     completePool: ReturnType<typeof vi.fn>;
     markCashReceived: ReturnType<typeof vi.fn>;
+    getDriverPoolHistory: ReturnType<typeof vi.fn>;
   };
   let controller: DriverController;
   let res: Partial<Response>;
@@ -37,6 +38,7 @@ describe('DriverController Unit Tests', () => {
       startPool: vi.fn(),
       completePool: vi.fn(),
       markCashReceived: vi.fn(),
+      getDriverPoolHistory: vi.fn(),
     };
     controller = new DriverController(mockDriverService as unknown as DriverService);
 
@@ -245,6 +247,46 @@ describe('DriverController Unit Tests', () => {
     await controller.getDriverPools(req, res as Response, next);
 
     expect(next).toHaveBeenCalledWith(error);
+  });
+
+  it('returns driver pool history when status is not OPEN', async () => {
+    const mockHistory = [
+      {
+        id: 'pool-completed-1',
+        pickupLocationId: 2,
+        pickupLocationName: 'Banani',
+        status: 'COMPLETED',
+        capacity: 3,
+        occupiedSeats: 2,
+        passengerCount: 2,
+        totalEarningsPaisa: 70000,
+        destinationStops: [{ locationId: 3, locationName: 'Gulshan' }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    mockDriverService.getDriverPoolHistory.mockResolvedValue(mockHistory);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      query: {
+        status: 'COMPLETED',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.getDriverPools(req, res as Response, next);
+
+    expect(mockDriverService.getDriverPoolHistory).toHaveBeenCalledWith(
+      CAST.driver.id,
+      'COMPLETED'
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(mockHistory);
   });
 
   it('successfully declines a pool and returns 200', async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MapPin, Play, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { MapPin, Play, CheckCircle2, AlertCircle, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePoolTransitionMutation } from "../hooks/use-pool-transition-mutation";
 import type { PoolLifecycleAction } from "../types/driver.types";
@@ -114,11 +114,11 @@ function TerminalStateNotice({
         {onResetConsole && (
           <Button
             type="button"
-            variant="outline"
             onClick={onResetConsole}
-            className="w-full py-2.5 font-semibold text-xs rounded-lg border-border hover:bg-surface-subtle transition flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2.5 font-semibold text-xs rounded-lg bg-black text-white hover:bg-black/90 transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
           >
-            Return to Open Feed
+            <Search className="size-3.5" />
+            <span>Look for New Rides</span>
           </Button>
         )}
       </div>
@@ -127,9 +127,21 @@ function TerminalStateNotice({
 
   if (status === "CANCELLED") {
     return (
-      <div className="pt-4 border-t border-border/60 flex items-center gap-2 text-xs text-ink-secondary bg-red-50/50 p-3 rounded-lg">
-        <AlertCircle className="size-4 text-red-600 shrink-0" />
-        <span>Trip cancelled. No active passengers remaining.</span>
+      <div className="pt-4 border-t border-border/60 space-y-3">
+        <div className="flex items-center gap-2 text-xs text-ink-secondary bg-red-50/50 p-3 rounded-lg">
+          <AlertCircle className="size-4 text-red-600 shrink-0" />
+          <span>Trip cancelled. No active passengers remaining.</span>
+        </div>
+        {onResetConsole && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onResetConsole}
+            className="w-full py-2.5 font-semibold text-xs rounded-lg border-border hover:bg-surface-subtle transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            Return to Dashboard
+          </Button>
+        )}
       </div>
     );
   }

@@ -15,4 +15,5 @@ export * from "./components/active-pool-console";
 export * from "./components/pool-lifecycle-actions";
 export * from "./components/passenger-roster";
 export * from "./hooks/use-mark-cash-received-mutation";
+export * from "./hooks/use-driver-pool-history-query";
 

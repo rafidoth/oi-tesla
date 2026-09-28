@@ -138,3 +138,17 @@ export interface MarkCashReceivedResponse {
     markedBy: string | null;
   };
 }
+
+export interface DriverPoolHistoryItem {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: string;
+  capacity: number;
+  occupiedSeats: number;
+  passengerCount: number;
+  totalEarningsPaisa: number;
+  destinationStops: OpenPoolDestinationStop[];
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -26,6 +26,7 @@ describe('DriverService Unit Tests', () => {
     findActiveMembersForCompletion: ReturnType<typeof vi.fn>;
     markPassengerRidesCompleted: ReturnType<typeof vi.fn>;
     createPendingPayments: ReturnType<typeof vi.fn>;
+    findDriverPoolHistory: ReturnType<typeof vi.fn>;
   };
   let mockEventsService: {
     logRideEvent: ReturnType<typeof vi.fn>;
@@ -50,6 +51,7 @@ describe('DriverService Unit Tests', () => {
       findActiveMembersForCompletion: vi.fn().mockResolvedValue([]),
       markPassengerRidesCompleted: vi.fn().mockResolvedValue(undefined),
       createPendingPayments: vi.fn().mockResolvedValue([]),
+      findDriverPoolHistory: vi.fn().mockResolvedValue([]),
     };
     mockEventsService = {
       logRideEvent: vi.fn().mockResolvedValue({} as any),
@@ -1217,6 +1219,50 @@ describe('DriverService Unit Tests', () => {
       await expect(driverService.completePool(driverId, poolId)).rejects.toThrow(
         ForbiddenError
       );
+    });
+  });
+
+  describe('getDriverPoolHistory', () => {
+    it('successfully returns driver pool history for completed trips', async () => {
+      mockDriverRepo.findDriverById.mockResolvedValue({
+        id: CAST.driver.id,
+        name: CAST.driver.name,
+        email: CAST.driver.email,
+        role: CAST.driver.role,
+      });
+
+      const mockHistory = [
+        {
+          id: 'pool-completed-1',
+          pickupLocationId: 2,
+          pickupLocationName: 'Banani',
+          status: 'COMPLETED',
+          capacity: 3,
+          occupiedSeats: 2,
+          passengerCount: 2,
+          totalEarningsPaisa: 70000,
+          destinationStops: [{ locationId: 3, locationName: 'Gulshan' }],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ];
+      mockDriverRepo.findDriverPoolHistory.mockResolvedValue(mockHistory);
+
+      const history = await driverService.getDriverPoolHistory(CAST.driver.id, 'COMPLETED');
+
+      expect(mockDriverRepo.findDriverPoolHistory).toHaveBeenCalledWith(
+        CAST.driver.id,
+        'COMPLETED'
+      );
+      expect(history).toEqual(mockHistory);
+    });
+
+    it('throws NotFoundError if driver does not exist', async () => {
+      mockDriverRepo.findDriverById.mockResolvedValue(null);
+
+      await expect(
+        driverService.getDriverPoolHistory('unknown-driver', 'COMPLETED')
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });

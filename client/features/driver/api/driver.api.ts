@@ -10,6 +10,7 @@ import type {
   PoolLifecycleAction,
   TransitionPoolResponse,
   MarkCashReceivedResponse,
+  DriverPoolHistoryItem,
 } from "../types/driver.types";
 
 export const driverApi = {
@@ -83,6 +84,16 @@ export const driverApi = {
   ): Promise<MarkCashReceivedResponse> {
     const response = await apiClient.post<MarkCashReceivedResponse>(
       baseUrlWrapper(`/driver/rides/${passengerRideId}/cash-received`)
+    );
+    return response.data;
+  },
+
+  async getDriverPoolHistory(
+    status?: string
+  ): Promise<DriverPoolHistoryItem[]> {
+    const query = status ? `?status=${status}` : '';
+    const response = await apiClient.get<DriverPoolHistoryItem[]>(
+      baseUrlWrapper(`/driver/pools${query}`)
     );
     return response.data;
   },

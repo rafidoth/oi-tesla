@@ -19,6 +19,7 @@ import type {
   DriverPoolRosterMember,
   PassengerRideCashSettlementInfo,
   MarkCashReceivedResponse,
+  DriverPoolHistoryItem,
 } from './driver.types.js';
 import type { DeclinePoolInput } from './driver.schema.js';
 
@@ -842,6 +843,14 @@ export class DriverService {
       },
       tx
     );
+  }
+
+  async getDriverPoolHistory(
+    driverId: string,
+    status?: string
+  ): Promise<DriverPoolHistoryItem[]> {
+    await this.assertDriverExists(driverId);
+    return await this.driverRepo.findDriverPoolHistory(driverId, status);
   }
 }
 

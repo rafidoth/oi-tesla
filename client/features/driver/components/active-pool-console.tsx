@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { RefreshCw, AlertCircle, Lock, AlertTriangle, ArrowLeft } from "lucide-react";
+import { RefreshCw, AlertCircle, Lock, AlertTriangle, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
@@ -291,35 +291,124 @@ function SettlementSummaryCard({
 }: {
   roster: DriverPoolRosterMember[];
 }) {
-  const cashPaisa = roster
-    .filter((item) => item.paymentMethod === "CASH")
-    .reduce((sum, item) => sum + item.farePaisa, 0);
-  const digitalPaisa = roster
-    .filter((item) => item.paymentMethod === "TESLAPAY")
-    .reduce((sum, item) => sum + item.farePaisa, 0);
-  const pendingCount = roster.filter((item) => item.paymentStatus !== "PAID").length;
+  const metrics = calculateSettlementMetrics(roster);
 
   return (
-    <div className="pt-4 border-t border-border/60 space-y-3">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-ink-secondary">
-        Post-Trip Settlement
+    <div className="pt-4 border-t border-border/60 space-y-3.5">
+      <SettlementHeader />
+      <TotalEarningsBlock totalPaisa={metrics.totalEarningsPaisa} />
+      <SettlementMetricsGrid metrics={metrics} />
+      <SettlementStatusRow
+        allSettled={metrics.allSettled}
+        pendingCount={metrics.pendingCount}
+      />
+    </div>
+  );
+}
+
+function calculateSettlementMetrics(roster: DriverPoolRosterMember[]) {
+  const totalEarningsPaisa = roster.reduce((sum, item) => sum + item.farePaisa, 0);
+  const cashMembers = roster.filter((item) => item.paymentMethod === "CASH");
+  const digitalMembers = roster.filter((item) => item.paymentMethod === "TESLAPAY");
+
+  const cashCollectedPaisa = cashMembers
+    .filter((item) => item.paymentStatus === "PAID")
+    .reduce((sum, item) => sum + item.farePaisa, 0);
+  const totalCashPaisa = cashMembers.reduce((sum, item) => sum + item.farePaisa, 0);
+
+  const digitalPaidPaisa = digitalMembers
+    .filter((item) => item.paymentStatus === "PAID")
+    .reduce((sum, item) => sum + item.farePaisa, 0);
+  const totalDigitalPaisa = digitalMembers.reduce((sum, item) => sum + item.farePaisa, 0);
+
+  const pendingCount = roster.filter((item) => item.paymentStatus !== "PAID").length;
+
+  return {
+    totalEarningsPaisa,
+    cashCollectedPaisa,
+    totalCashPaisa,
+    digitalPaidPaisa,
+    totalDigitalPaisa,
+    pendingCount,
+    allSettled: pendingCount === 0,
+  };
+}
+
+function SettlementHeader() {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-ink-secondary">
+        Post-Trip Financial Summary
+      </span>
+    </div>
+  );
+}
+
+function TotalEarningsBlock({ totalPaisa }: { totalPaisa: number }) {
+  return (
+    <div className="p-3 rounded-lg bg-surface-subtle border border-border flex items-center justify-between">
+      <div>
+        <div className="text-[11px] text-ink-secondary font-medium">Total Pool Earnings</div>
+        <div className="text-[10px] text-ink-secondary/70">Final frozen fare value</div>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
-          <div className="text-ink-secondary text-[11px]">Cash to Collect</div>
-          <FareDisplay paisa={cashPaisa} size="sm" />
-        </div>
-        <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
-          <div className="text-ink-secondary text-[11px]">TeslaPay (Digital)</div>
-          <FareDisplay paisa={digitalPaisa} size="sm" />
+      <FareDisplay paisa={totalPaisa} size="default" align="right" />
+    </div>
+  );
+}
+
+function SettlementMetricsGrid({
+  metrics,
+}: {
+  metrics: ReturnType<typeof calculateSettlementMetrics>;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
+        <div className="text-ink-secondary text-[11px] font-medium">Cash Collected</div>
+        <FareDisplay paisa={metrics.cashCollectedPaisa} size="sm" />
+        <div className="text-[10px] text-ink-secondary">
+          {metrics.totalCashPaisa === 0
+            ? "No cash riders"
+            : metrics.cashCollectedPaisa === metrics.totalCashPaisa
+            ? "All cash collected"
+            : `of ৳${(metrics.totalCashPaisa / 100).toFixed(0)} total`}
         </div>
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
-        <span className="text-ink-secondary">Pending Settlements</span>
-        <span className="font-semibold text-ink">
-          {pendingCount} passenger{pendingCount === 1 ? "" : "s"}
+      <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
+        <div className="text-ink-secondary text-[11px] font-medium">TeslaPay (Digital)</div>
+        <FareDisplay paisa={metrics.digitalPaidPaisa} size="sm" />
+        <div className="text-[10px] text-ink-secondary">
+          {metrics.totalDigitalPaisa === 0
+            ? "No digital riders"
+            : metrics.digitalPaidPaisa === metrics.totalDigitalPaisa
+            ? "All digital settled"
+            : `of ৳${(metrics.totalDigitalPaisa / 100).toFixed(0)} total`}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettlementStatusRow({
+  allSettled,
+  pendingCount,
+}: {
+  allSettled: boolean;
+  pendingCount: number;
+}) {
+  return (
+    <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
+      <span className="text-ink-secondary text-[11px]">Settlement Status</span>
+      {allSettled ? (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+          <CheckCircle2 className="size-3" />
+          All Payments Settled
         </span>
-      </div>
+      ) : (
+        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+          {pendingCount} Pending Settlement{pendingCount === 1 ? "" : "s"}
+        </span>
+      )}
     </div>
   );
 }
