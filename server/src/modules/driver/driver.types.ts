@@ -1,0 +1,154 @@
+export interface DriverProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'DRIVER';
+}
+
+export interface DriverVehicle {
+  id: string;
+  name: string;
+  regNo: string;
+  capacity: number;
+  status: 'ONLINE' | 'OFFLINE';
+}
+
+export interface DriverActivePool {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: string;
+  capacity: number;
+  occupiedSeats: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DriverMeResponse {
+  driver: DriverProfile;
+  vehicle: DriverVehicle;
+  activePool: DriverActivePool | null;
+}
+
+export interface UpdateDriverStatusResponse {
+  status: 'ONLINE' | 'OFFLINE';
+  vehicle: DriverVehicle;
+}
+
+export interface OpenPoolMemberRequest {
+  passengerRideId: string;
+  destLocationId: number;
+  destLocationName: string;
+  seats: number;
+}
+
+export interface OpenPoolDestinationStop {
+  locationId: number;
+  locationName: string;
+}
+
+export interface OpenPoolItem {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: 'OPEN';
+  capacity: number;
+  occupiedSeats: number;
+  passengerCount: number;
+  destinationStops: OpenPoolDestinationStop[];
+  memberRequests: OpenPoolMemberRequest[];
+  createdAt: Date;
+}
+
+export interface DeclinePoolResponse {
+  success: boolean;
+  poolId: string;
+}
+
+export interface AcceptPoolResponse {
+  success: boolean;
+  pool: {
+    id: string;
+    pickupLocationId: number;
+    status: string;
+    capacity: number;
+    occupiedSeats: number;
+    driverId: string;
+    vehicleId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
+export interface DriverPoolRosterMember {
+  id: string;
+  passengerId: string;
+  passengerName: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  destLocationId: number;
+  destLocationName: string;
+  seats: number;
+  farePaisa: number;
+  status: string;
+  paymentMethod: string;
+  paymentStatus: string | null;
+  createdAt: Date;
+}
+
+export interface DriverPoolDetailsResponse {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: string;
+  capacity: number;
+  occupiedSeats: number;
+  driverId: string;
+  vehicleId: string;
+  destinationStops: OpenPoolDestinationStop[];
+  roster: DriverPoolRosterMember[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface PassengerRideCashSettlementInfo {
+  passengerRideId: string;
+  rideRequestId: string;
+  passengerId: string;
+  poolId: string;
+  completedAt: Date | null;
+  driverId: string | null;
+  poolStatus: string;
+  paymentId: string | null;
+  paymentMethod: string;
+  paymentAmountPaisa: number | null;
+  paymentStatus: string | null;
+  paymentPaidAt: Date | null;
+  paymentMarkedBy: string | null;
+}
+
+export interface MarkCashReceivedResponse {
+  success: boolean;
+  payment: {
+    id: string;
+    passengerRideId: string;
+    method: string;
+    amountPaisa: number;
+    status: string;
+    paidAt: Date | null;
+    markedBy: string | null;
+  };
+}
+
+export interface DriverPoolHistoryItem {
+  id: string;
+  pickupLocationId: number;
+  pickupLocationName: string;
+  status: string;
+  capacity: number;
+  occupiedSeats: number;
+  passengerCount: number;
+  totalEarningsPaisa: number;
+  destinationStops: OpenPoolDestinationStop[];
+  createdAt: Date;
+  updatedAt: Date;
+}

@@ -1,0 +1,106 @@
+import { Router } from 'express';
+import { DriverController } from './driver.controller.js';
+import { authenticate } from '../../shared/middleware/authenticate.js';
+import { authorize } from '../../shared/middleware/authorize.js';
+import { validate } from '../../shared/middleware/validate.js';
+import {
+  updateDriverStatusSchema,
+  getDriverPoolsQuerySchema,
+  poolIdParamsSchema,
+  declinePoolSchema,
+  rideIdParamsSchema,
+} from './driver.schema.js';
+
+export function createDriverRouter(controller: DriverController): Router {
+  const router = Router();
+
+  router.get('/me', authenticate, authorize('DRIVER'), (req, res, next) =>
+    controller.getDriverMe(req, res, next)
+  );
+
+  router.patch(
+    '/status',
+    authenticate,
+    authorize('DRIVER'),
+    validate(updateDriverStatusSchema, 'body'),
+    (req, res, next) => controller.updateDriverStatus(req, res, next)
+  );
+
+  router.get(
+    '/pools',
+    authenticate,
+    authorize('DRIVER'),
+    validate(getDriverPoolsQuerySchema, 'query'),
+    (req, res, next) => controller.getDriverPools(req, res, next)
+  );
+
+  router.get(
+    '/pools/:id',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.getDriverPoolById(req, res, next)
+  );
+
+  router.get(
+    '/pools/:id/roster',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.getDriverPoolRoster(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/accept',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.acceptPool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/decline',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    validate(declinePoolSchema, 'body'),
+    (req, res, next) => controller.declinePool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/arrive',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.arrivePool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/start',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.startPool(req, res, next)
+  );
+
+  router.post(
+    '/pools/:id/complete',
+    authenticate,
+    authorize('DRIVER'),
+    validate(poolIdParamsSchema, 'params'),
+    (req, res, next) => controller.completePool(req, res, next)
+  );
+
+  router.post(
+    '/rides/:id/cash-received',
+    authenticate,
+    authorize('DRIVER'),
+    validate(rideIdParamsSchema, 'params'),
+    (req, res, next) => controller.markCashReceived(req, res, next)
+  );
+
+  return router;
+}
+
+export default createDriverRouter;
+

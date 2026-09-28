@@ -18,10 +18,12 @@ export default function PassengerDashboardPage() {
   const { data: activeRide, isLoading: isActiveRideLoading } =
     useActiveRideQuery();
 
+  const [dismissedRideId, setDismissedRideId] = React.useState<string | null>(null);
+
   const isActiveRide = Boolean(
     activeRide &&
-      activeRide.status !== "COMPLETED" &&
-      activeRide.status !== "CANCELLED"
+      activeRide.status !== "CANCELLED" &&
+      activeRide.id !== dismissedRideId
   );
 
   return (
@@ -52,7 +54,10 @@ export default function PassengerDashboardPage() {
             <Skeleton className="h-12 w-full rounded-md" animate />
           </Card>
         ) : isActiveRide && activeRide ? (
-          <ActiveRideCard ride={activeRide} />
+          <ActiveRideCard
+            ride={activeRide}
+            onDismissCompleted={() => setDismissedRideId(activeRide.id)}
+          />
         ) : (
           <BookingCard />
         )}

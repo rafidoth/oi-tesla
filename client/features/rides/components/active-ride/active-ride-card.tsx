@@ -13,10 +13,15 @@ import { cn } from "cn";
 
 export interface ActiveRideCardProps {
   ride: ActiveRideDetailsDto;
+  onDismissCompleted?: () => void;
   className?: string;
 }
 
-export function ActiveRideCard({ ride, className }: ActiveRideCardProps) {
+export function ActiveRideCard({
+  ride,
+  onDismissCompleted,
+  className,
+}: ActiveRideCardProps) {
   const [cancelOpen, setCancelOpen] = React.useState(false);
 
   return (
@@ -47,12 +52,17 @@ export function ActiveRideCard({ ride, className }: ActiveRideCardProps) {
             farePaisa={ride.farePaisa}
             originalEstimateFarePaisa={ride.originalEstimateFarePaisa}
             paymentMethod={ride.paymentMethod}
+            status={ride.status}
           />
 
           <RideActions
             isCancellable={ride.isCancellable}
             status={ride.status}
+            paymentMethod={ride.paymentMethod}
+            farePaisa={ride.farePaisa}
+            paymentStatus={ride.paymentStatus}
             onCancelClick={() => setCancelOpen(true)}
+            onDismissCompleted={onDismissCompleted}
           />
         </CardContent>
       </Card>

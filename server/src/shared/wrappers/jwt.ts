@@ -9,6 +9,7 @@ export interface JwtUserPayload {
 }
 
 export interface JwtPayload extends JwtUserPayload {
+  sub?: string;
   iat?: number;
   exp?: number;
 }
@@ -28,6 +29,7 @@ export async function signToken(
     email: payload.email,
     role: payload.role,
   })
+    .setSubject(payload.id)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(now)
     .setExpirationTime(now + expiresInSeconds)
@@ -49,8 +51,11 @@ export async function verifyToken(
       algorithms: ['HS256'],
     });
 
+    const userId = (payload.sub || payload.id) as string;
+
     return {
-      id: payload.id as string,
+      id: userId,
+      sub: userId,
       email: payload.email as string,
       role: payload.role as 'PASSENGER' | 'DRIVER',
       iat: payload.iat,

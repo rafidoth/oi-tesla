@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { FareDisplay } from "@/components/custom/fare-display";
-import { Banknote, Zap } from "lucide-react";
+import { Banknote, Zap, Lock } from "lucide-react";
 import { cn } from "cn";
 
 export interface RideFareProps {
   farePaisa: number;
   originalEstimateFarePaisa: number;
   paymentMethod: string;
+  status?: string;
   className?: string;
 }
 
@@ -16,6 +17,7 @@ export function RideFare({
   farePaisa,
   originalEstimateFarePaisa,
   paymentMethod,
+  status,
   className,
 }: RideFareProps) {
   const isTeslaPay = paymentMethod === "TESLAPAY";
@@ -23,9 +25,17 @@ export function RideFare({
   return (
     <div className={cn("p-3.5 rounded-lg bg-surface border border-border flex items-center justify-between gap-4", className)}>
       <div className="space-y-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary">
-          Your Fare
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary">
+            Your Fare
+          </span>
+          {(status === "STARTED" || status === "COMPLETED") && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-subtle border border-border text-ink-secondary">
+              <Lock className="size-2.5" />
+              Final
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5 text-xs text-ink-secondary">
           {isTeslaPay ? (
             <>

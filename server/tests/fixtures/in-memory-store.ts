@@ -44,6 +44,7 @@ export class InMemoryStore {
   public pools = new Map<string, PoolRow>();
   public rideRequests = new Map<string, RideRequestRow>();
   public passengerRides = new Map<string, PassengerRideRow>();
+  public payments = new Map<string, any>();
   public events: RideEvent[] = [];
 
   private currentTimestampMs = new Date('2026-09-26T08:00:00.000Z').getTime();
@@ -455,9 +456,11 @@ export class InMemoryRidesRepository {
     for (const ride of this.store.passengerRides.values()) {
       if (ride.passengerId === passengerId && ride.cancelledAt === null) {
         const pool = this.store.pools.get(ride.poolId);
+        const payment = this.store.payments.get(ride.id);
         if (
           pool &&
-          ['OPEN', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED'].includes(pool.status)
+          (['OPEN', 'MATCHED', 'DRIVER_ARRIVED', 'STARTED'].includes(pool.status) ||
+            (pool.status === 'COMPLETED' && (!payment || payment.status === 'PENDING')))
         ) {
           return this.mapActiveRide(ride, pool);
         }
@@ -499,6 +502,7 @@ export class InMemoryRidesRepository {
       updatedAt: ride.updatedAt,
       originalEstimateFarePaisa: req.estimateFarePaisa,
       paymentMethod: req.paymentMethod,
+      paymentStatus: this.store.payments.get(ride.id)?.status ?? null,
       pickupLocation: {
         id: pickupLoc.id,
         name: pickupLoc.name,

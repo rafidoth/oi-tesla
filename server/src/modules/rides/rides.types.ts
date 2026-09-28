@@ -43,6 +43,7 @@ export interface ActiveRideDetailsDto {
   farePaisa: number;
   originalEstimateFarePaisa: number;
   paymentMethod: string;
+  paymentStatus?: string | null;
   pickupLocation: {
     id: number;
     name: string;

@@ -8,6 +8,15 @@ import { SeatGuard } from './domain/SeatGuard.js';
 import { FareCalculator } from './domain/FareCalculator.js';
 import type { EventsService } from '../events/events.service.js';
 import { ConflictError } from '../../shared/errors/ConflictError.js';
+import { NotFoundError } from '../../shared/errors/NotFoundError.js';
+import { ForbiddenError } from '../../shared/errors/ForbiddenError.js';
+import { InvalidTransitionError } from '../../shared/errors/InvalidTransitionError.js';
+import {
+  PoolStateMachine,
+  type PoolStatus,
+  type PoolAction,
+  type ActorRole,
+} from './domain/PoolStateMachine.js';
 
 const logger = pino();
 
@@ -130,7 +139,7 @@ export class PoolsService {
    * Updates passenger_rides in the database and logs a FARE_RECALCULATED event.
    */
   async recalculatePoolFares(poolId: string, tx?: any): Promise<Map<string, number>> {
-    // 1. activeMembers = await poolsRepo.findActiveMembersWithLegLocations(poolId, tx)
+    await this.assertFaresNotFrozen(poolId, tx);
     const activeMembers = await this.poolsRepo.findActiveMembersWithLegLocations(poolId, tx);
 
     // 2. If empty, return new Map()
@@ -190,6 +199,50 @@ export class PoolsService {
 
     // 10. Return shares
     return shares;
+  }
+
+  async transitionPool(
+    poolId: string,
+    action: PoolAction,
+    actor: { id?: string; role: ActorRole },
+    tx?: any
+  ): Promise<{ poolId: string; previousStatus: PoolStatus; newStatus: PoolStatus; action: PoolAction }> {
+    const pool = await this.findPoolOrThrow(poolId, tx);
+    this.assertDriverOwnership(pool.driverId, actor);
+    const previousStatus = pool.status as PoolStatus;
+    const newStatus = PoolStateMachine.getNextStatus(previousStatus, action, actor.role);
+    await this.poolsRepo.updatePoolStatus(poolId, newStatus, tx);
+    return { poolId, previousStatus, newStatus, action };
+  }
+
+  private async findPoolOrThrow(poolId: string, tx?: any) {
+    const pool = await this.poolsRepo.findPoolById(poolId, tx);
+    if (!pool) {
+      throw new NotFoundError('POOL_NOT_FOUND', 'Pool not found');
+    }
+    return pool;
+  }
+
+  private assertDriverOwnership(
+    poolDriverId: string | null,
+    actor: { id?: string; role: ActorRole }
+  ): void {
+    if (actor.role === 'DRIVER' && (!poolDriverId || poolDriverId !== actor.id)) {
+      throw new ForbiddenError('Driver is not assigned to this pool');
+    }
+  }
+
+  private async assertFaresNotFrozen(poolId: string, tx?: any): Promise<void> {
+    if (typeof this.poolsRepo.findPoolById !== 'function') {
+      return;
+    }
+    const pool = await this.poolsRepo.findPoolById(poolId, tx);
+    if (pool && ['STARTED', 'COMPLETED', 'CANCELLED'].includes(pool.status)) {
+      throw new InvalidTransitionError(
+        'FARES_FROZEN',
+        'Fares are permanently frozen once trip has started'
+      );
+    }
   }
 }
 

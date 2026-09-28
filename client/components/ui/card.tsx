@@ -18,7 +18,7 @@ function Card({
       data-size={size}
       data-variant={variant}
       className={cn(
-        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[var(--radius-lg)] bg-card p-(--card-spacing) text-sm text-card-foreground border border-border [--card-spacing:--spacing(4)] data-[size=sm]:[--card-spacing:--spacing(3)]",
+        "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-[var(--radius-lg)] bg-card p-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] data-[size=sm]:[--card-spacing:--spacing(3)]",
         variant === "elevated"
           ? "shadow-[var(--shadow-card-elevated)]"
           : "shadow-none",
