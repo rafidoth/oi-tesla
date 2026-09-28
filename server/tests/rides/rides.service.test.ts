@@ -7,12 +7,17 @@ import type { PoolsService } from '../../src/modules/pools/pools.service.js';
 import type { EventsService } from '../../src/modules/events/events.service.js';
 import { InvalidTransitionError } from '../../src/shared/errors/InvalidTransitionError.js';
 import { ConflictError } from '../../src/shared/errors/ConflictError.js';
+import { NotFoundError } from '../../src/shared/errors/NotFoundError.js';
+import { ForbiddenError } from '../../src/shared/errors/ForbiddenError.js';
 
 describe('RidesService Unit Tests', () => {
   let mockRidesRepo: {
     findActiveRideByPassengerId: ReturnType<typeof vi.fn>;
     createRideRequest: ReturnType<typeof vi.fn>;
     createPassengerRide: ReturnType<typeof vi.fn>;
+    findRideForTeslaPaySettlement: ReturnType<typeof vi.fn>;
+    markTeslaPayPaymentAsPaid: ReturnType<typeof vi.fn>;
+    findPassengerRideHistory: ReturnType<typeof vi.fn>;
   };
   let mockLocationsService: {
     getDistance: ReturnType<typeof vi.fn>;
@@ -36,6 +41,9 @@ describe('RidesService Unit Tests', () => {
       findActiveRideByPassengerId: vi.fn(),
       createRideRequest: vi.fn(),
       createPassengerRide: vi.fn(),
+      findRideForTeslaPaySettlement: vi.fn(),
+      markTeslaPayPaymentAsPaid: vi.fn(),
+      findPassengerRideHistory: vi.fn(),
     };
     mockLocationsService = {
       getDistance: vi.fn(),
@@ -326,6 +334,266 @@ describe('RidesService Unit Tests', () => {
 
       expect(mockPoolsService.joinPoolWithFallback).not.toHaveBeenCalled();
       expect(mockRidesRepo.createRideRequest).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('payWithTeslaPay', () => {
+    const passengerId = 'passenger-uuid-1';
+    const rideId = 'ride-uuid-1';
+
+    const validTeslaPayRideInfo = {
+      passengerRideId: rideId,
+      rideRequestId: 'request-uuid-1',
+      passengerId,
+      poolId: 'pool-uuid-1',
+      completedAt: new Date('2026-09-28T08:00:00Z'),
+      paymentId: 'pay-uuid-1',
+      paymentMethod: 'TESLAPAY',
+      paymentAmountPaisa: 15000,
+      paymentStatus: 'PENDING',
+      paymentPaidAt: null,
+      paymentMarkedBy: null,
+    };
+
+    const paidPaymentRecord = {
+      id: 'pay-uuid-1',
+      passengerRideId: rideId,
+      method: 'TESLAPAY',
+      amountPaisa: 15000,
+      status: 'PAID',
+      paidAt: new Date('2026-09-28T08:05:00Z'),
+      markedBy: passengerId,
+      createdAt: new Date('2026-09-28T08:00:00Z'),
+      updatedAt: new Date('2026-09-28T08:05:00Z'),
+    };
+
+    it('successfully settles pending TeslaPay payment and records audit event', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({ ...validTeslaPayRideInfo });
+      mockRidesRepo.markTeslaPayPaymentAsPaid.mockResolvedValue({ ...paidPaymentRecord });
+
+      const result = await ridesService.payWithTeslaPay(rideId, passengerId);
+
+      expect(result.success).toBe(true);
+      expect(result.payment.status).toBe('PAID');
+      expect(result.payment.markedBy).toBe(passengerId);
+      expect(mockRidesRepo.markTeslaPayPaymentAsPaid).toHaveBeenCalledWith(
+        'pay-uuid-1',
+        passengerId,
+        expect.any(Date),
+        mockTx
+      );
+      expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: 'PAYMENT_COMPLETED',
+          actorType: 'PASSENGER',
+          actorId: passengerId,
+          poolId: 'pool-uuid-1',
+          passengerRideId: rideId,
+          rideRequestId: 'request-uuid-1',
+          fromState: 'PENDING',
+          toState: 'PAID',
+          payload: expect.objectContaining({
+            paymentId: 'pay-uuid-1',
+            method: 'TESLAPAY',
+            amountPaisa: 15000,
+            markedBy: passengerId,
+          }),
+        }),
+        mockTx
+      );
+    });
+
+    it('throws NotFoundError when ride does not exist', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue(null);
+
+      await expect(ridesService.payWithTeslaPay('non-existent-ride', passengerId)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('throws ForbiddenError when caller is not the ride owner', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        passengerId: 'different-passenger',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ForbiddenError
+      );
+    });
+
+    it('throws InvalidTransitionError when ride is not completed', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        completedAt: null,
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws InvalidTransitionError when payment method is not TESLAPAY', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentMethod: 'CASH',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws NotFoundError when payment record is missing', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentId: null,
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        NotFoundError
+      );
+    });
+
+    it('throws ConflictError when payment is already paid', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentStatus: 'PAID',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ConflictError
+      );
+    });
+
+    it('throws InvalidTransitionError when payment status is not PENDING', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({
+        ...validTeslaPayRideInfo,
+        paymentStatus: 'FAILED',
+      });
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        InvalidTransitionError
+      );
+    });
+
+    it('throws ConflictError on concurrent update race condition', async () => {
+      mockRidesRepo.findRideForTeslaPaySettlement.mockResolvedValue({ ...validTeslaPayRideInfo });
+      mockRidesRepo.markTeslaPayPaymentAsPaid.mockResolvedValue(null);
+
+      await expect(ridesService.payWithTeslaPay(rideId, passengerId)).rejects.toThrow(
+        ConflictError
+      );
+    });
+  });
+
+  describe('getPassengerRideHistory', () => {
+    const passengerId = 'passenger-uuid-1';
+    const baseRecord = {
+      id: 'ride-uuid-1',
+      rideRequestId: 'req-uuid-1',
+      passengerId,
+      poolId: 'pool-uuid-1',
+      seats: 2,
+      farePaisa: 28000,
+      cancelledAt: null,
+      cancelReason: null,
+      completedAt: new Date('2026-09-28T10:30:00Z'),
+      createdAt: new Date('2026-09-28T10:00:00Z'),
+      updatedAt: new Date('2026-09-28T10:30:00Z'),
+      originalEstimateFarePaisa: 30000,
+      paymentMethod: 'TESLAPAY',
+      paymentStatus: 'PAID',
+      pickupLocation: {
+        id: 1,
+        name: 'Airport Terminal 3',
+        lat: '23.8500',
+        lng: '90.4000',
+      },
+      destLocation: {
+        id: 3,
+        name: 'Gulshan 2 Circle',
+        lat: '23.7900',
+        lng: '90.4100',
+      },
+      driver: { name: 'Karim Ullah' },
+      vehicle: { name: 'Tesla Model Y', regNo: 'DHA-LA-5544' },
+    };
+
+    it('maps completed ride history records correctly', async () => {
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([baseRecord]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId, {
+        status: 'COMPLETED',
+      });
+
+      expect(mockRidesRepo.findPassengerRideHistory).toHaveBeenCalledWith(passengerId, {
+        status: 'COMPLETED',
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({
+        id: 'ride-uuid-1',
+        rideRequestId: 'req-uuid-1',
+        poolId: 'pool-uuid-1',
+        status: 'COMPLETED',
+        seats: 2,
+        farePaisa: 28000,
+        paymentMethod: 'TESLAPAY',
+        paymentStatus: 'PAID',
+        pickupLocation: {
+          id: 1,
+          name: 'Airport Terminal 3',
+          lat: 23.85,
+          lng: 90.4,
+        },
+        destLocation: {
+          id: 3,
+          name: 'Gulshan 2 Circle',
+          lat: 23.79,
+          lng: 90.41,
+        },
+        driver: { name: 'Karim Ullah' },
+        vehicle: { name: 'Tesla Model Y', regNo: 'DHA-LA-5544' },
+        createdAt: '2026-09-28T10:00:00.000Z',
+        completedAt: '2026-09-28T10:30:00.000Z',
+        cancelledAt: null,
+        cancelReason: null,
+      });
+    });
+
+    it('derives CANCELLED status and falls back to estimate fare when farePaisa is null', async () => {
+      const cancelledRecord = {
+        ...baseRecord,
+        id: 'ride-uuid-2',
+        farePaisa: null,
+        completedAt: null,
+        cancelledAt: new Date('2026-09-28T10:05:00Z'),
+        cancelReason: 'Driver took too long',
+        paymentStatus: null,
+        driver: null,
+        vehicle: null,
+      };
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([cancelledRecord]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe('CANCELLED');
+      expect(result[0].farePaisa).toBe(30000);
+      expect(result[0].cancelledAt).toBe('2026-09-28T10:05:00.000Z');
+      expect(result[0].cancelReason).toBe('Driver took too long');
+      expect(result[0].completedAt).toBeNull();
+      expect(result[0].paymentStatus).toBeNull();
+      expect(result[0].driver).toBeNull();
+      expect(result[0].vehicle).toBeNull();
+    });
+
+    it('returns empty array when passenger has no history', async () => {
+      mockRidesRepo.findPassengerRideHistory.mockResolvedValue([]);
+
+      const result = await ridesService.getPassengerRideHistory(passengerId);
+
+      expect(result).toEqual([]);
     });
   });
 });

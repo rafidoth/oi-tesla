@@ -34,3 +34,15 @@ export const cancelRideSchema = z.object({
 
 export type CancelRideInput = z.infer<typeof cancelRideSchema>;
 
+export const rideIdParamsSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export type RideIdParamsInput = z.infer<typeof rideIdParamsSchema>;
+
+export const getPassengerRidesQuerySchema = z.object({
+  status: z.enum(['COMPLETED', 'CANCELLED', 'ALL']).optional(),
+});
+
+export type GetPassengerRidesQueryInput = z.infer<typeof getPassengerRidesQuerySchema>;
+

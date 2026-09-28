@@ -56,6 +56,7 @@ export function ActiveRideCard({
           />
 
           <RideActions
+            rideId={ride.id}
             isCancellable={ride.isCancellable}
             status={ride.status}
             paymentMethod={ride.paymentMethod}

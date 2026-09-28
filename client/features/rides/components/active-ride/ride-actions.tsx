@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Lock, CheckCircle2, Zap, Banknote } from "lucide-react";
+import { Lock, CheckCircle2, Zap, Banknote, Loader2 } from "lucide-react";
 import type { DerivedRideStatus } from "../../types/rides.types";
+import { usePayTeslaPayMutation } from "../../hooks/use-pay-teslapay-mutation";
 import { cn } from "cn";
 
 export interface RideActionsProps {
+  rideId?: string;
   isCancellable: boolean;
   status: DerivedRideStatus;
   paymentMethod?: string;
@@ -18,6 +20,7 @@ export interface RideActionsProps {
 }
 
 export function RideActions({
+  rideId,
   isCancellable,
   status,
   paymentMethod,
@@ -34,6 +37,7 @@ export function RideActions({
   if (status === "COMPLETED") {
     return (
       <CompletedRidePrompt
+        rideId={rideId}
         paymentMethod={paymentMethod}
         farePaisa={farePaisa}
         paymentStatus={paymentStatus}
@@ -51,7 +55,7 @@ export function RideActions({
           variant="outline"
           size="sm"
           onClick={onCancelClick}
-          className="text-xs text-destructive hover:bg-destructive/10 border-border hover:border-destructive/30 cursor-pointer hover:cursor-pointer"
+          className="text-xs text-destructive hover:bg-destructive/10 border-border hover:border-destructive/30 cursor-pointer"
         >
           Cancel Ride
         </Button>
@@ -65,13 +69,158 @@ export function RideActions({
   );
 }
 
+function CompletedTripBanner() {
+  return (
+    <div className="p-3 rounded-lg border border-emerald-200 bg-emerald-50 text-xs flex items-center gap-2 font-bold text-emerald-900">
+      <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+      <span>Trip Completed! Destination reached.</span>
+    </div>
+  );
+}
+
+function TeslaPaySettlementHeader({ formattedFare }: { formattedFare: string }) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center gap-2">
+        <div className="size-7 rounded-lg bg-black text-white flex items-center justify-center shrink-0">
+          <Zap className="size-3.5 fill-white" />
+        </div>
+        <div>
+          <p className="font-bold text-ink leading-tight">TeslaPay Digital Settlement</p>
+          <p className="text-[11px] text-ink-secondary">Corridor billing</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="text-sm font-bold text-ink">{formattedFare}</p>
+        <p className="text-[10px] text-muted">Final Fare</p>
+      </div>
+    </div>
+  );
+}
+
+function TeslaPaySettledBadge({ formattedFare }: { formattedFare: string }) {
+  return (
+    <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
+      <div className="flex items-center gap-1.5">
+        <CheckCircle2 className="size-3.5 text-emerald-600" />
+        <span>TeslaPay Settled</span>
+      </div>
+      <span>{formattedFare} Paid</span>
+    </div>
+  );
+}
+
+function TeslaPayPayButton({
+  rideId,
+  formattedFare,
+  isPending,
+  isError,
+  onPay,
+}: {
+  rideId?: string;
+  formattedFare: string;
+  isPending: boolean;
+  isError: boolean;
+  onPay: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {isError && (
+        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-center justify-between">
+          <span>Settlement failed. Please retry.</span>
+          <button
+            type="button"
+            onClick={onPay}
+            className="font-bold underline text-xs cursor-pointer"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      <Button
+        type="button"
+        disabled={isPending || !rideId}
+        onClick={onPay}
+        className="w-full py-2.5 px-4 rounded-xl bg-black text-white hover:bg-black/90 font-bold text-xs flex items-center justify-between cursor-pointer transition disabled:opacity-75"
+      >
+        <span className="flex items-center gap-1.5">
+          {isPending ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Zap className="size-3.5 fill-white" />
+          )}
+          <span>{isPending ? "Authorizing TeslaPay..." : "Pay with TeslaPay"}</span>
+        </span>
+        <span className="bg-white/20 px-2 py-0.5 rounded text-[11px] font-semibold">
+          {formattedFare} →
+        </span>
+      </Button>
+    </div>
+  );
+}
+
+function TeslaPaySettlementAction({
+  rideId,
+  formattedFare,
+  isPaid,
+}: {
+  rideId?: string;
+  formattedFare: string;
+  isPaid: boolean;
+}) {
+  const mutation = usePayTeslaPayMutation();
+
+  return (
+    <div className="border border-border rounded-xl p-3.5 space-y-3 bg-surface">
+      <TeslaPaySettlementHeader formattedFare={formattedFare} />
+      {isPaid ? (
+        <TeslaPaySettledBadge formattedFare={formattedFare} />
+      ) : (
+        <TeslaPayPayButton
+          rideId={rideId}
+          formattedFare={formattedFare}
+          isPending={mutation.isPending}
+          isError={mutation.isError}
+          onPay={() => rideId && mutation.mutate({ rideId })}
+        />
+      )}
+    </div>
+  );
+}
+
+function CashSettlementInfo({
+  formattedFare,
+  isPaid,
+}: {
+  formattedFare: string;
+  isPaid: boolean;
+}) {
+  return (
+    <div className="p-3.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs space-y-2">
+      <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+        <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+        <span>Trip Completed! Destination reached.</span>
+      </div>
+      <p className="text-emerald-800 leading-relaxed">
+        Please pay your final fare of {formattedFare} in cash to your driver.
+      </p>
+      <div className="flex items-center gap-1 text-[11px] font-semibold bg-white/80 px-2 py-0.5 rounded border border-emerald-300 w-fit text-emerald-900">
+        <Banknote className="size-3 text-black" />
+        <span>{isPaid ? "Cash Paid to Driver" : "Cash Settlement Pending"}</span>
+      </div>
+    </div>
+  );
+}
+
 function CompletedRidePrompt({
+  rideId,
   paymentMethod,
   farePaisa,
   paymentStatus,
   onDismiss,
   className,
 }: {
+  rideId?: string;
   paymentMethod?: string;
   farePaisa: number;
   paymentStatus?: string | null;
@@ -84,30 +233,18 @@ function CompletedRidePrompt({
 
   return (
     <div className={cn("pt-2 space-y-3", className)}>
-      <div className="p-3.5 rounded-lg border border-emerald-200 bg-emerald-50 text-xs space-y-2">
-        <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-          <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
-          <span>Trip Completed! Destination reached.</span>
-        </div>
-        <p className="text-emerald-800 leading-relaxed">
-          {isTeslaPay
-            ? `Your final fare of ${formattedFare} is queued for digital settlement via TeslaPay.`
-            : `Please pay your final fare of ${formattedFare} in cash to your driver.`}
-        </p>
-        <div className="flex items-center gap-2 pt-1 font-semibold text-emerald-900">
-          {isTeslaPay ? (
-            <div className="flex items-center gap-1 text-[11px] bg-white/80 px-2 py-0.5 rounded border border-emerald-300">
-              <Zap className="size-3 text-black fill-black" />
-              <span>{isPaid ? "TeslaPay Settled" : "TeslaPay Settlement Pending"}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 text-[11px] bg-white/80 px-2 py-0.5 rounded border border-emerald-300">
-              <Banknote className="size-3 text-black" />
-              <span>{isPaid ? "Cash Paid to Driver" : "Cash Settlement Pending"}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      {isTeslaPay ? (
+        <>
+          <CompletedTripBanner />
+          <TeslaPaySettlementAction
+            rideId={rideId}
+            formattedFare={formattedFare}
+            isPaid={isPaid}
+          />
+        </>
+      ) : (
+        <CashSettlementInfo formattedFare={formattedFare} isPaid={isPaid} />
+      )}
 
       {onDismiss && (
         <Button
@@ -121,3 +258,5 @@ function CompletedRidePrompt({
     </div>
   );
 }
+
+export default RideActions;

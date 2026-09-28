@@ -6,10 +6,12 @@ import {
   BookingCard,
   ActiveRideCard,
   useActiveRideQuery,
+  RideHistoryDrawer,
 } from "@/features/rides";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Zap } from "lucide-react";
+import { Clock, Zap } from "lucide-react";
 
 export default function PassengerDashboardPage() {
   const { data: userData } = useCurrentUser();
@@ -28,7 +30,6 @@ export default function PassengerDashboardPage() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6 pb-12">
-      {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-1.5 text-xs text-ink-secondary font-medium">
@@ -39,6 +40,19 @@ export default function PassengerDashboardPage() {
             {userName}
           </h1>
         </div>
+
+        <RideHistoryDrawer
+          trigger={
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs font-semibold h-8 px-3 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
+            >
+              <Clock className="size-3.5 text-ink-secondary" />
+              <span>Past Rides</span>
+            </Button>
+          }
+        />
       </div>
 
       {/* Main Focus View */}

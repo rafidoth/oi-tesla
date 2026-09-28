@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { db } from '../../db/client.js';
 import {
@@ -9,11 +9,62 @@ import {
   users,
   vehicles,
   payments,
+  type Payment,
   type PassengerRide as PassengerRideRow,
   type RideRequest as RideRequestRow,
 } from '../../db/schema/index.js';
 
 export type { PassengerRideRow, RideRequestRow };
+
+export interface PassengerRideHistoryRecord {
+  id: string;
+  rideRequestId: string;
+  passengerId: string;
+  poolId: string;
+  seats: number;
+  farePaisa: number | null;
+  cancelledAt: Date | null;
+  cancelReason: string | null;
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  originalEstimateFarePaisa: number;
+  paymentMethod: string;
+  paymentStatus: string | null;
+  pickupLocation: {
+    id: number;
+    name: string;
+    lat: string;
+    lng: string;
+  };
+  destLocation: {
+    id: number;
+    name: string;
+    lat: string;
+    lng: string;
+  };
+  driver: {
+    name: string;
+  } | null;
+  vehicle: {
+    name: string;
+    regNo: string;
+  } | null;
+}
+
+export interface PassengerRideTeslaPaySettlementInfo {
+  passengerRideId: string;
+  rideRequestId: string;
+  passengerId: string;
+  poolId: string;
+  completedAt: Date | null;
+  paymentId: string | null;
+  paymentMethod: string;
+  paymentAmountPaisa: number | null;
+  paymentStatus: string | null;
+  paymentPaidAt: Date | null;
+  paymentMarkedBy: string | null;
+}
 
 const pickupLocations = alias(locations, 'pickup_loc');
 const destLocations = alias(locations, 'dest_loc');
@@ -445,6 +496,182 @@ export class RidesRepository {
       );
 
     return result ? Number(result.count) : 0;
+  }
+
+  async findRideForTeslaPaySettlement(
+    rideId: string,
+    tx?: any
+  ): Promise<PassengerRideTeslaPaySettlementInfo | null> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const [row] = await executor
+      .select({
+        passengerRideId: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+        poolId: passengerRides.poolId,
+        completedAt: passengerRides.completedAt,
+        paymentId: payments.id,
+        paymentMethod: rideRequests.paymentMethod,
+        paymentAmountPaisa: payments.amountPaisa,
+        paymentStatus: payments.status,
+        paymentPaidAt: payments.paidAt,
+        paymentMarkedBy: payments.markedBy,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
+      .where(eq(passengerRides.id, rideId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async markTeslaPayPaymentAsPaid(
+    paymentId: string,
+    passengerId: string,
+    paidAt: Date,
+    tx?: any
+  ): Promise<Payment | null> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const [updated] = await executor
+      .update(payments)
+      .set({
+        status: 'PAID',
+        paidAt,
+        markedBy: passengerId,
+        updatedAt: paidAt,
+      })
+      .where(
+        and(
+          eq(payments.id, paymentId),
+          eq(payments.status, 'PENDING')
+        )
+      )
+      .returning();
+
+    return updated ?? null;
+  }
+
+  async findPassengerRideHistory(
+    passengerId: string,
+    filter?: { status?: string },
+    tx?: any
+  ): Promise<PassengerRideHistoryRecord[]> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const statusCondition = this.buildHistoryStatusCondition(filter?.status);
+
+    const rows = await executor
+      .select({
+        id: passengerRides.id,
+        rideRequestId: passengerRides.rideRequestId,
+        passengerId: passengerRides.passengerId,
+        poolId: passengerRides.poolId,
+        seats: passengerRides.seats,
+        farePaisa: passengerRides.farePaisa,
+        cancelledAt: passengerRides.cancelledAt,
+        cancelReason: passengerRides.cancelReason,
+        completedAt: passengerRides.completedAt,
+        createdAt: passengerRides.createdAt,
+        updatedAt: passengerRides.updatedAt,
+        originalEstimateFarePaisa: rideRequests.estimateFarePaisa,
+        paymentMethod: rideRequests.paymentMethod,
+        paymentStatus: payments.status,
+        pickupLocationId: pickupLocations.id,
+        pickupLocationName: pickupLocations.name,
+        pickupLocationLat: pickupLocations.lat,
+        pickupLocationLng: pickupLocations.lng,
+        destLocationId: destLocations.id,
+        destLocationName: destLocations.name,
+        destLocationLat: destLocations.lat,
+        destLocationLng: destLocations.lng,
+        driverName: driverUsers.name,
+        vehicleName: poolVehicles.name,
+        vehicleRegNo: poolVehicles.regNo,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .innerJoin(pools, eq(passengerRides.poolId, pools.id))
+      .innerJoin(pickupLocations, eq(rideRequests.pickupLocationId, pickupLocations.id))
+      .innerJoin(destLocations, eq(rideRequests.destLocationId, destLocations.id))
+      .leftJoin(payments, eq(payments.passengerRideId, passengerRides.id))
+      .leftJoin(driverUsers, eq(pools.driverId, driverUsers.id))
+      .leftJoin(poolVehicles, eq(pools.vehicleId, poolVehicles.id))
+      .where(and(eq(passengerRides.passengerId, passengerId), statusCondition))
+      .orderBy(sql`${passengerRides.createdAt} DESC`);
+
+    return rows.map((row) => this.mapHistoryRecordRow(row));
+  }
+
+  private buildHistoryStatusCondition(status?: string) {
+    if (status === 'COMPLETED') {
+      return and(isNotNull(passengerRides.completedAt), isNull(passengerRides.cancelledAt));
+    }
+    if (status === 'CANCELLED') {
+      return isNotNull(passengerRides.cancelledAt);
+    }
+    return or(isNotNull(passengerRides.completedAt), isNotNull(passengerRides.cancelledAt));
+  }
+
+  private mapHistoryRecordRow(row: {
+    id: string;
+    rideRequestId: string;
+    passengerId: string;
+    poolId: string;
+    seats: number;
+    farePaisa: number | null;
+    cancelledAt: Date | null;
+    cancelReason: string | null;
+    completedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    originalEstimateFarePaisa: number;
+    paymentMethod: string;
+    paymentStatus: string | null;
+    pickupLocationId: number;
+    pickupLocationName: string;
+    pickupLocationLat: string;
+    pickupLocationLng: string;
+    destLocationId: number;
+    destLocationName: string;
+    destLocationLat: string;
+    destLocationLng: string;
+    driverName: string | null;
+    vehicleName: string | null;
+    vehicleRegNo: string | null;
+  }): PassengerRideHistoryRecord {
+    return {
+      id: row.id,
+      rideRequestId: row.rideRequestId,
+      passengerId: row.passengerId,
+      poolId: row.poolId,
+      seats: row.seats,
+      farePaisa: row.farePaisa,
+      cancelledAt: row.cancelledAt,
+      cancelReason: row.cancelReason,
+      completedAt: row.completedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      originalEstimateFarePaisa: row.originalEstimateFarePaisa,
+      paymentMethod: row.paymentMethod,
+      paymentStatus: row.paymentStatus ?? null,
+      pickupLocation: {
+        id: row.pickupLocationId,
+        name: row.pickupLocationName,
+        lat: row.pickupLocationLat,
+        lng: row.pickupLocationLng,
+      },
+      destLocation: {
+        id: row.destLocationId,
+        name: row.destLocationName,
+        lat: row.destLocationLat,
+        lng: row.destLocationLng,
+      },
+      driver: row.driverName ? { name: row.driverName } : null,
+      vehicle:
+        row.vehicleName && row.vehicleRegNo
+          ? { name: row.vehicleName, regNo: row.vehicleRegNo }
+          : null,
+    };
   }
 }
 
