@@ -44,7 +44,7 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center p-6 space-y-4">
         <Skeleton className="h-8 w-48 rounded-[var(--radius-md)]" />
-        <Skeleton className="h-32 w-full max-w-lg rounded-[var(--radius-lg)]" />
+        <Skeleton className="h-32 w-full max-w-lg " />
       </div>
     );
   }

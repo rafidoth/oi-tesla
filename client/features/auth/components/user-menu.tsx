@@ -63,7 +63,7 @@ export function UserMenu() {
         variant="ghost"
         size="sm"
         onClick={handleLogout}
-        className="gap-1.5 text-xs text-ink-secondary hover:text-accent-red hover:bg-accent-red-surface/50"
+        className="gap-1.5 text-xs text-ink-secondary hover:text-error hover:bg-error-surface"
         title="Sign Out"
       >
         <LogOut className="size-3.5" />

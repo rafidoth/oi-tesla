@@ -119,13 +119,15 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-lg shadow-none border-border/80 bg-white">
+    <Card className="w-full max-w-lg shadow-none border-border bg-white">
       <CardHeader className="space-y-2 text-center pb-6">
-        <div className="flex justify-center items-center gap-2 text-primary font-heading font-bold text-xl tracking-tight">
-          <Zap className="size-5 fill-primary" />
+        <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
+          <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
+            <Zap className="size-4.5 fill-white text-white" />
+          </div>
           <span>OiTesla</span>
         </div>
-        <CardTitle className="font-heading text-2xl font-bold tracking-tight text-ink">
+        <CardTitle className="text-2xl font-bold tracking-tight text-ink">
           Create your account
         </CardTitle>
         <CardDescription className="text-ink-secondary text-sm">
@@ -137,7 +139,7 @@ export function RegisterForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* General error banner */}
           {generalError && (
-            <div className="p-3 rounded-[var(--radius-md)] bg-accent-red-surface text-accent-red border border-accent-red/20 flex items-start gap-2.5 text-sm font-medium">
+            <div className="p-3 rounded-[var(--radius-md)] bg-error-surface text-error border border-error/20 flex items-start gap-2.5 text-sm font-medium">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
@@ -201,7 +203,7 @@ export function RegisterForm() {
               aria-invalid={!!errors.name}
             />
             {errors.name && (
-              <p className="text-xs text-accent-red font-medium mt-1">
+              <p className="text-xs text-error font-medium mt-1">
                 {errors.name}
               </p>
             )}
@@ -225,7 +227,7 @@ export function RegisterForm() {
               aria-invalid={!!errors.email}
             />
             {errors.email && (
-              <p className="text-xs text-accent-red font-medium mt-1">
+              <p className="text-xs text-error font-medium mt-1">
                 {errors.email}
               </p>
             )}
@@ -250,7 +252,7 @@ export function RegisterForm() {
               aria-invalid={!!errors.password}
             />
             {errors.password && (
-              <p className="text-xs text-accent-red font-medium mt-1">
+              <p className="text-xs text-error font-medium mt-1">
                 {errors.password}
               </p>
             )}
@@ -258,9 +260,9 @@ export function RegisterForm() {
 
           {/* Dynamic Vehicle Fields (DRIVER ONLY) */}
           {role === "DRIVER" && (
-            <div className="space-y-3 pt-3 border-t border-surface-subtle transition-all">
+            <div className="space-y-3 pt-3 border-t border-border transition-all">
               <div className="flex items-center gap-2">
-                <Car className="size-4 text-primary" />
+                <Car className="size-4 text-ink" />
                 <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
                   Vehicle Information
                 </h4>
@@ -288,7 +290,7 @@ export function RegisterForm() {
                     aria-invalid={!!errors.vehicleName}
                   />
                   {errors.vehicleName && (
-                    <p className="text-xs text-accent-red font-medium mt-1">
+                    <p className="text-xs text-error font-medium mt-1">
                       {errors.vehicleName}
                     </p>
                   )}
@@ -318,7 +320,7 @@ export function RegisterForm() {
                     aria-invalid={!!errors.vehicleRegNo}
                   />
                   {errors.vehicleRegNo && (
-                    <p className="text-xs text-accent-red font-medium mt-1">
+                    <p className="text-xs text-error font-medium mt-1">
                       {errors.vehicleRegNo}
                     </p>
                   )}
@@ -356,7 +358,7 @@ export function RegisterForm() {
                   </span>
                 </div>
                 {errors.vehicleCapacity && (
-                  <p className="text-xs text-accent-red font-medium mt-1">
+                  <p className="text-xs text-error font-medium mt-1">
                     {errors.vehicleCapacity}
                   </p>
                 )}
@@ -367,7 +369,7 @@ export function RegisterForm() {
           {/* Submit button */}
           <Button
             type="submit"
-            className="w-full mt-4 font-medium"
+            className="w-full mt-4 font-semibold"
             disabled={registerMutation.isPending}
           >
             {registerMutation.isPending ? (
@@ -382,12 +384,12 @@ export function RegisterForm() {
         </form>
       </CardContent>
 
-      <CardFooter className="flex justify-center border-t border-surface-subtle pt-4">
+      <CardFooter className="flex justify-center border-t border-border pt-4">
         <p className="text-sm text-ink-secondary">
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-semibold text-primary hover:text-primary-strong transition-colors"
+            className="font-semibold text-ink hover:underline transition-colors"
           >
             Log in
           </Link>
