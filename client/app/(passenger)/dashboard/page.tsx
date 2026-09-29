@@ -34,7 +34,7 @@ export default function PassengerDashboardPage() {
         <div>
           <div className="flex items-center gap-1.5 text-sm text-ink-secondary font-medium">
             <Zap className="size-3.5 fill-black text-black" />
-            <span>Tesla Pool</span>
+            <span>Passenger</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-ink mt-0.5">
             {userName}
