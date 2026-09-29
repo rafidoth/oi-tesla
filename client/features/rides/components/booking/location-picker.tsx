@@ -23,6 +23,7 @@ export interface LocationPickerProps {
   onDestChange: (id: number | null) => void;
   disabled?: boolean;
   isLoading?: boolean;
+  size?: "default" | "lg";
   className?: string;
 }
 
@@ -35,6 +36,7 @@ export function LocationPicker({
   onDestChange,
   disabled = false,
   isLoading = false,
+  size = "default",
   className,
 }: LocationPickerProps) {
   const pickupLocation = React.useMemo(() => {
@@ -74,18 +76,20 @@ export function LocationPicker({
         >
           <SelectTrigger
             className={cn(
-              "w-full h-[42px] bg-white border border-border-strong rounded-[var(--radius-md)] px-3 text-sm font-medium transition-all outline-none",
+              "w-full bg-white border border-border-strong rounded-[var(--radius-md)] transition-all outline-none",
+              size === "lg" ? "h-12 px-3.5 text-base" : "h-[42px] px-3 text-sm",
               "hover:border-black/50 hover:bg-surface-subtle/60 cursor-pointer",
               "focus-visible:ring-1 focus-visible:ring-black focus-visible:border-black",
               disabled && "opacity-50 cursor-not-allowed pointer-events-none"
             )}
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
-              <CircleDot className="size-4 text-ink shrink-0" />
+              <CircleDot className={cn("text-ink shrink-0", size === "lg" ? "size-5" : "size-4")} />
               <span
                 className={cn(
-                  "truncate text-sm",
-                  pickupLocation ? "text-ink font-semibold" : "text-muted-foreground"
+                  "truncate",
+                  size === "lg" ? "text-base font-semibold" : "text-sm",
+                  pickupLocation ? "text-ink" : "text-muted-foreground font-normal"
                 )}
               >
                 {pickupLocation ? pickupLocation.name : "Select pickup hub"}
@@ -99,7 +103,10 @@ export function LocationPicker({
                 <SelectItem
                   key={loc.id}
                   value={String(loc.id)}
-                  className="cursor-pointer hover:bg-surface-subtle py-2 px-2.5 text-sm"
+                  className={cn(
+                    "cursor-pointer hover:bg-surface-subtle",
+                    size === "lg" ? "py-2.5 px-3 text-base" : "py-2 px-2.5 text-sm"
+                  )}
                 >
                   <span className="font-medium text-ink">{loc.name}</span>
                 </SelectItem>
@@ -132,7 +139,8 @@ export function LocationPicker({
         >
           <SelectTrigger
             className={cn(
-              "w-full h-[42px] bg-white border border-border-strong rounded-[var(--radius-md)] px-3 text-sm font-medium transition-all outline-none",
+              "w-full bg-white border border-border-strong rounded-[var(--radius-md)] transition-all outline-none",
+              size === "lg" ? "h-12 px-3.5 text-base" : "h-[42px] px-3 text-sm",
               !pickupLocationId
                 ? "opacity-60 cursor-not-allowed bg-surface-subtle/30"
                 : "hover:border-black/50 hover:bg-surface-subtle/60 cursor-pointer",
@@ -141,11 +149,12 @@ export function LocationPicker({
             )}
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1 text-left">
-              <MapPin className="size-4 text-ink shrink-0" />
+              <MapPin className={cn("text-ink shrink-0", size === "lg" ? "size-5" : "size-4")} />
               <span
                 className={cn(
-                  "truncate text-sm",
-                  destLocation ? "text-ink font-semibold" : "text-muted-foreground"
+                  "truncate",
+                  size === "lg" ? "text-base font-semibold" : "text-sm",
+                  destLocation ? "text-ink" : "text-muted-foreground font-normal"
                 )}
               >
                 {destLocation
@@ -153,7 +162,7 @@ export function LocationPicker({
                   : !pickupLocationId
                     ? "Select pickup first"
                     : reachableDestinations.length === 0
-                      ? "No corridor destinations"
+                      ? "No route destinations"
                       : "Select drop-off stop"}
               </span>
             </div>
@@ -167,7 +176,10 @@ export function LocationPicker({
                   <SelectItem
                     key={dest.location.id}
                     value={String(dest.location.id)}
-                    className="cursor-pointer hover:bg-surface-subtle py-2 px-2.5 text-sm"
+                    className={cn(
+                      "cursor-pointer hover:bg-surface-subtle",
+                      size === "lg" ? "py-2.5 px-3 text-base" : "py-2 px-2.5 text-sm"
+                    )}
                   >
                     <div className="flex items-center justify-between w-full gap-4">
                       <span className="font-medium text-ink">{dest.location.name}</span>
