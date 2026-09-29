@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, Clock, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleOnline } from "@/components/custom/toggle-online";
 import type { DriverMeResponse } from "../types/driver.types";
+import { DriverPoolHistoryDrawer } from "./history";
 
 interface DriverDashboardHeaderProps {
   data?: DriverMeResponse;
@@ -16,6 +17,8 @@ interface DriverDashboardHeaderProps {
   onRetry?: () => void;
   onToggleStatus?: (nextStatus: "ONLINE" | "OFFLINE") => void;
   isUpdatingStatus?: boolean;
+  hasActivePool?: boolean;
+  historyTrigger?: React.ReactNode;
 }
 
 export function DriverDashboardHeader({
@@ -26,6 +29,8 @@ export function DriverDashboardHeader({
   onRetry,
   onToggleStatus,
   isUpdatingStatus = false,
+  hasActivePool = false,
+  historyTrigger,
 }: DriverDashboardHeaderProps) {
   if (isLoading) {
     return (
@@ -36,7 +41,10 @@ export function DriverDashboardHeader({
               <Skeleton className="h-3 w-24 rounded-xs" animate />
               <Skeleton className="h-3 w-12 rounded-full" animate />
             </div>
-            <Skeleton className="h-7 w-44 rounded-sm" animate />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-7 w-44 rounded-sm" animate />
+              <Skeleton className="h-7 w-24 rounded-lg" animate />
+            </div>
             <Skeleton className="h-4 w-32 rounded-xs" animate />
           </div>
           <div className="flex items-center gap-6 sm:border-l sm:border-border/60 sm:pl-6">
@@ -91,10 +99,9 @@ export function DriverDashboardHeader({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-xs text-ink-secondary">
             <span className="font-semibold uppercase tracking-wider text-[11px] text-ink">
-              Driver Console
+              DRIVER
             </span>
             <span className="text-muted">•</span>
-            {/* Minimal vehicle status indicator */}
             <span className="inline-flex items-center gap-1.5 text-xs">
               <span
                 className={`size-1.5 rounded-full ${
@@ -107,9 +114,25 @@ export function DriverDashboardHeader({
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-ink">
-            {driver.name}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-ink">
+              {driver.name}
+            </h1>
+            {historyTrigger ?? (
+              <DriverPoolHistoryDrawer
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs font-semibold h-7 px-2.5 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
+                  >
+                    <Clock className="size-3.5 text-ink-secondary" />
+                    <span>Past Pools</span>
+                  </Button>
+                }
+              />
+            )}
+          </div>
 
           <div className="flex items-center gap-2 text-xs text-ink-secondary pt-0.5">
             <span className="font-semibold text-ink">{vehicle.name}</span>
@@ -120,26 +143,26 @@ export function DriverDashboardHeader({
           </div>
         </div>
 
-        <div className="flex items-center gap-6 sm:border-l sm:border-border/60 sm:pl-6">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6 sm:border-l sm:border-border/60 sm:pl-6">
           {onToggleStatus && (
             <div className="flex flex-col items-start sm:items-end gap-1">
               <span className="text-xs text-ink-secondary font-medium">Availability</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-ink">
-                  {isOnline ? "Available" : "Off Duty"}
+                  {hasActivePool ? "On Trip" : isOnline ? "Available" : "Off Duty"}
                 </span>
                 <ToggleOnline
                   online={isOnline}
                   onToggle={(nextState) =>
                     onToggleStatus(nextState ? "ONLINE" : "OFFLINE")
                   }
-                  disabled={isUpdatingStatus}
+                  disabled={isUpdatingStatus || hasActivePool}
                 />
               </div>
             </div>
           )}
 
-          <div className="border-l border-border/40 pl-6 text-left sm:text-right">
+          <div className="border-l border-border/40 pl-4 sm:pl-6 text-left sm:text-right">
             <div className="text-xs text-ink-secondary font-medium">Physical Capacity</div>
             <div className="text-base font-bold text-ink flex items-center sm:justify-end gap-1.5 mt-0.5">
               <div className="flex gap-1" aria-label={`${vehicle.capacity} seats`}>

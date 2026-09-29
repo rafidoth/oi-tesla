@@ -47,10 +47,6 @@ export function OpenPoolsFeed({
               {pools.length}
             </span>
           )}
-          <span className="inline-flex items-center gap-1.5 text-xs text-ink-secondary ml-1">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Live Feed</span>
-          </span>
         </div>
 
         {onRefresh && (
@@ -143,12 +139,7 @@ export function OpenPoolsFeed({
           <div className="size-10 rounded-full bg-surface-muted flex items-center justify-center text-ink-secondary mx-auto">
             <Car className="size-5" />
           </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-ink">No compatible pools available</h3>
-            <p className="text-xs text-ink-secondary max-w-sm mx-auto">
-              Waiting for new passenger requests matching your vehicle capacity. Newly formed pools will appear here automatically.
-            </p>
-          </div>
+          <h3 className="text-sm font-bold text-ink">No compatible pools available</h3>
         </Card>
       ) : (
         <div className="space-y-3">

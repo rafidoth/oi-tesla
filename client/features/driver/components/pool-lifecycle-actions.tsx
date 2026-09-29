@@ -35,15 +35,7 @@ export function PoolLifecycleActions({
   const Icon = actionConfig.icon;
 
   return (
-    <div className="pt-4 border-t border-border/60 space-y-3">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-ink-secondary font-medium uppercase tracking-wider text-[11px]">
-          Next Trip Action
-        </span>
-      </div>
-      <p className="text-xs text-ink-secondary leading-relaxed">
-        {actionConfig.description}
-      </p>
+    <div className="pt-4 border-t border-border/60">
       <Button
         type="button"
         disabled={isPending}

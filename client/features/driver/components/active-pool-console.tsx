@@ -7,6 +7,7 @@ import { SeatMeter } from "@/components/custom/seat-meter";
 import { FareDisplay } from "@/components/custom/fare-display";
 import { StatusBadge, type RideStatus } from "@/components/custom/status-badge";
 import { useDriverPoolDetailsQuery } from "../hooks/use-driver-pool-details-query";
+import { useLocationsQuery, sortStopsByRoute } from "@/features/locations";
 import { PoolLifecycleActions } from "./pool-lifecycle-actions";
 import { PassengerRoster, PassengerRosterSkeleton } from "./passenger-roster";
 import type { DriverPoolRosterMember } from "../types/driver.types";
@@ -71,6 +72,7 @@ export function ActivePoolConsole({ poolId, onResetConsole }: ActivePoolConsoleP
         <div className="lg:col-span-5 space-y-4">
           <Card className="p-6 space-y-5">
             <RouteCorridor
+              pickupLocationId={pool.pickupLocationId}
               pickupLocationName={pool.pickupLocationName}
               destinationStops={pool.destinationStops}
             />
@@ -121,9 +123,6 @@ function ConsoleTopBar({
     <div className="flex items-center justify-between px-1">
       <div className="flex items-center gap-2.5">
         <StatusBadge status={status as RideStatus} />
-        <span className="text-xs text-ink-secondary font-mono">
-          #POOL-{poolId.slice(0, 8)}
-        </span>
       </div>
       <button
         type="button"
@@ -176,9 +175,6 @@ function PoolCancelledNotice({
           <StatusBadge status="CANCELLED" />
         </div>
         <h3 className="text-base font-bold text-ink pt-2">Pool Cancelled by Passengers</h3>
-        <p className="text-xs text-ink-secondary leading-relaxed max-w-sm mx-auto">
-          All passengers in pool <span className="font-mono font-medium">#{poolId.slice(0, 8)}</span> cancelled their ride requests before vehicle arrival. The pool has been closed and your vehicle is released.
-        </p>
       </div>
       <div className="pt-2">
         <button
@@ -195,29 +191,43 @@ function PoolCancelledNotice({
 }
 
 function RouteCorridor({
+  pickupLocationId,
   pickupLocationName,
   destinationStops,
 }: {
+  pickupLocationId: number;
   pickupLocationName: string;
   destinationStops: Array<{ locationId: number; locationName: string }>;
 }) {
+  const { data: catalog } = useLocationsQuery();
+  const sortedStops = sortStopsByRoute(pickupLocationId, destinationStops, catalog?.routes);
+
   return (
     <div className="space-y-3">
       <div className="text-[11px] font-bold uppercase tracking-wider text-ink-secondary">
-        Route Corridor
+        Trip Route
       </div>
-      <div className="space-y-3 relative pl-6 before:content-[''] before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
-        <div className="relative">
-          <span className="absolute -left-6 top-1 size-3 rounded-full border-2 border-black bg-white" />
-          <div className="text-xs text-ink-secondary">Pickup Origin</div>
-          <div className="text-sm font-bold text-ink">{pickupLocationName}</div>
+      <div className="space-y-4 relative">
+        <div
+          className="absolute left-2.5 top-3 bottom-3 w-0.5 bg-border -translate-x-1/2"
+          aria-hidden="true"
+        />
+
+        <div className="flex items-start gap-3">
+          <div className="w-5 flex justify-center shrink-0 pt-1">
+            <span className="size-3.5 rounded-full border-2 border-black bg-white z-10" />
+          </div>
+          <div className="space-y-0.5 min-w-0">
+            <div className="text-xs text-ink-secondary">Pickup Point</div>
+            <div className="text-sm font-bold text-ink">{pickupLocationName}</div>
+          </div>
         </div>
 
-        {destinationStops.map((stop, index) => (
+        {sortedStops.map((stop, index) => (
           <RouteStopItem
             key={stop.locationId}
             stopName={stop.locationName}
-            isFinal={index === destinationStops.length - 1}
+            isFinal={index === sortedStops.length - 1}
             stopIndex={index + 1}
           />
         ))}
@@ -240,12 +250,16 @@ function RouteStopItem({
     : "border-border-strong bg-surface-subtle";
 
   return (
-    <div className="relative">
-      <span className={`absolute -left-6 top-1 size-3 rounded-full border-2 ${dotClasses}`} />
-      <div className="text-xs text-ink-secondary">
-        {isFinal ? "Final Stop" : `Stop ${stopIndex}`}
+    <div className="flex items-start gap-3">
+      <div className="w-5 flex justify-center shrink-0 pt-1">
+        <span className={`size-3.5 rounded-full border-2 ${dotClasses} z-10`} />
       </div>
-      <div className="text-sm font-semibold text-ink">{stopName}</div>
+      <div className="space-y-0.5 min-w-0">
+        <div className="text-xs text-ink-secondary">
+          {isFinal ? "Final Stop" : `Stop ${stopIndex}`}
+        </div>
+        <div className="text-sm font-semibold text-ink">{stopName}</div>
+      </div>
     </div>
   );
 }
@@ -262,24 +276,23 @@ function CapacityMeter({
   const remainingSeats = Math.max(0, capacity - occupiedSeats);
 
   return (
-    <div className="pt-4 border-t border-border/60 space-y-2">
-      <div className="flex justify-between items-center text-xs">
-        <span className="text-ink-secondary font-medium">Vehicle Seating</span>
-        <span className="font-bold tabular-nums text-ink">
-          {occupiedSeats} / {capacity} Seats Booked
-        </span>
+    <div className="pt-4 border-t border-border/60 space-y-2 text-center">
+      <div className="font-bold tabular-nums text-ink text-sm">
+        {occupiedSeats} / {capacity} Seats Booked
       </div>
-      <SeatMeter occupiedSeats={occupiedSeats} capacity={capacity} size="default" />
+      <div className="flex justify-center">
+        <SeatMeter occupiedSeats={occupiedSeats} capacity={capacity} size="default" />
+      </div>
       <div className="text-[11px] text-ink-secondary pt-0.5">
         {isStarted ? (
-          <span className="inline-flex items-center gap-1.5 font-medium text-ink-secondary">
+          <span className="inline-flex items-center justify-center gap-1.5 font-medium text-ink-secondary">
             <Lock className="size-3 text-ink-secondary shrink-0" />
             Membership locked · Trip in progress
           </span>
         ) : remainingSeats > 0 ? (
-          `${remainingSeats} seat${remainingSeats === 1 ? "" : "s"} remaining for pooling`
+          `${remainingSeats} ${remainingSeats === 1 ? "seat" : "seats"} remaining`
         ) : (
-          "Vehicle full"
+          "All seats are booked"
         )}
       </div>
     </div>
