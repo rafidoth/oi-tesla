@@ -67,9 +67,9 @@ export function BookingCard({ onSuccess, className }: BookingCardProps) {
             size="sm"
             onClick={reset}
             disabled={isSubmitting}
-            className="h-7 px-2 text-xs text-ink-secondary hover:text-ink gap-1 cursor-pointer"
+            className="h-8 px-2.5 text-sm text-ink-secondary hover:text-ink gap-1.5 cursor-pointer"
           >
-            <RotateCcw className="size-3" />
+            <RotateCcw className="size-3.5" />
             <span>Reset</span>
           </Button>
         )}

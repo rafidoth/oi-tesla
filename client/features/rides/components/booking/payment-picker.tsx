@@ -20,7 +20,7 @@ export function PaymentPicker({
 }: PaymentPickerProps) {
   return (
     <div className={cn("flex items-center justify-between gap-3", className)}>
-      <span className="text-xs font-semibold uppercase tracking-wider text-ink-secondary">
+      <span className="text-sm font-semibold uppercase tracking-wider text-ink-secondary">
         Payment
       </span>
 
@@ -30,13 +30,13 @@ export function PaymentPicker({
           disabled={disabled}
           onClick={() => onChange("CASH")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold transition-all select-none cursor-pointer",
+            "flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-sm)] text-sm font-semibold transition-all select-none cursor-pointer",
             value === "CASH"
               ? "bg-black text-white"
               : "text-ink-secondary hover:text-ink"
           )}
         >
-          <Banknote className={cn("size-3.5", value === "CASH" ? "text-white" : "text-ink")} />
+          <Banknote className={cn("size-4", value === "CASH" ? "text-white" : "text-ink")} />
           <span>Cash</span>
         </button>
 
@@ -45,13 +45,13 @@ export function PaymentPicker({
           disabled={disabled}
           onClick={() => onChange("TESLAPAY")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-semibold transition-all select-none cursor-pointer",
+            "flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-sm)] text-sm font-semibold transition-all select-none cursor-pointer",
             value === "TESLAPAY"
               ? "bg-black text-white"
               : "text-ink-secondary hover:text-ink"
           )}
         >
-          <Zap className={cn("size-3.5", value === "TESLAPAY" ? "fill-white text-white" : "fill-black text-black")} />
+          <Zap className={cn("size-4", value === "TESLAPAY" ? "fill-white text-white" : "fill-black text-black")} />
           <span>TeslaPay</span>
         </button>
       </div>

@@ -74,22 +74,22 @@ export function SeatStepper({
     <div className={cn("space-y-2", className)}>
       {/* Header with Title and Live Count */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-secondary">
+        <span className="text-sm font-semibold uppercase tracking-wider text-ink-secondary">
           Seats
         </span>
 
         {/* Live Count Display */}
         <div
-          className="flex items-center gap-1.5 text-xs text-ink"
+          className="flex items-center gap-1.5 text-sm text-ink"
           aria-label={`${value} of ${maxSeats} seats selected`}
         >
-          <span className="font-bold text-primary font-mono text-sm tabular-nums">
+          <span className="font-bold text-primary font-mono text-base tabular-nums">
             {value}
           </span>
           <span className="text-ink-secondary font-medium">
             {value === 1 ? "Seat" : "Seats"}
           </span>
-          <span className="text-[11px] text-ink-secondary font-mono tabular-nums">
+          <span className="text-xs text-ink-secondary font-mono tabular-nums">
             ({value}/{maxSeats})
           </span>
         </div>

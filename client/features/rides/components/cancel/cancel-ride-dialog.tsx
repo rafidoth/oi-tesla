@@ -54,13 +54,13 @@ export function CancelRideDialog({
           <DialogTitle className="text-base font-bold text-ink">
             Cancel Ride?
           </DialogTitle>
-          <DialogDescription className="text-xs text-ink-secondary">
+          <DialogDescription className="text-sm text-ink-secondary">
             Your reserved seat will be released back to free.
           </DialogDescription>
         </DialogHeader>
 
         {!isCancellable ? (
-          <div className="p-2.5 rounded-md bg-surface text-xs text-ink-secondary border border-border">
+          <div className="p-2.5 rounded-md bg-surface text-sm text-ink-secondary border border-border">
             Driver has arrived. Cancellation is no longer available.
           </div>
         ) : (
@@ -71,11 +71,11 @@ export function CancelRideDialog({
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               disabled={isSubmitting}
-              className="resize-none text-xs bg-surface border-border"
+              className="resize-none text-sm bg-surface border-border"
             />
 
             {error && (
-              <div className="flex items-center gap-1.5 p-2 rounded-md bg-destructive/10 text-xs text-destructive">
+              <div className="flex items-center gap-1.5 p-2 rounded-md bg-destructive/10 text-sm text-destructive">
                 <AlertCircle className="size-3.5 shrink-0" />
                 <span>{error.message || "Failed to cancel ride"}</span>
               </div>
@@ -88,7 +88,7 @@ export function CancelRideDialog({
                 size="sm"
                 onClick={close}
                 disabled={isSubmitting}
-                className="text-xs text-ink-secondary hover:text-ink cursor-pointer hover:cursor-pointer"
+                className="text-sm text-ink-secondary hover:text-ink cursor-pointer hover:cursor-pointer"
               >
                 Keep Ride
               </Button>
@@ -97,7 +97,7 @@ export function CancelRideDialog({
                 variant="destructive"
                 size="sm"
                 disabled={!isCancellable || isSubmitting}
-                className="text-xs gap-1.5 cursor-pointer hover:cursor-pointer"
+                className="text-sm gap-1.5 cursor-pointer hover:cursor-pointer"
               >
                 {isSubmitting ? (
                   <>

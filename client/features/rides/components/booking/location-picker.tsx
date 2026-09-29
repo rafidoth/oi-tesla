@@ -172,7 +172,7 @@ export function LocationPicker({
                     <div className="flex items-center justify-between w-full gap-4">
                       <span className="font-medium text-ink">{dest.location.name}</span>
                       {km && (
-                        <span className="text-[11px] font-medium text-ink-secondary tabular-nums">
+                        <span className="text-xs font-medium text-ink-secondary tabular-nums">
                           {km} km
                         </span>
                       )}
