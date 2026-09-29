@@ -12,7 +12,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "Dhaka Tesla Pool",
+  title: "OiTesla",
   description: "Dhaka Tesla Pool - Pooled Rides for Dhaka's Electric Three-Wheelers",
 };
 
