@@ -14,6 +14,10 @@ export * from "./hooks/use-active-ride-query";
 export * from "./hooks/use-cancel-ride-mutation";
 export * from "./hooks/use-pay-teslapay-mutation";
 export * from "./hooks/use-passenger-ride-history-query";
+export * from "./hooks/use-fare-estimator";
+
+// Estimator Presentation
+export * from "./components/fare-estimator/fare-estimator-card";
 
 // Booking Modular Subcomponents & Hook
 export * from "./components/booking/use-booking-flow";

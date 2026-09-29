@@ -1,252 +1,169 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuthStore } from "@/features/auth";
-import { useHealthCheck } from "@/api";
+import Image from "next/image";
+import { useAuthStore, AuthModal, useAuthModalStore } from "@/features/auth";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  StatusBadge,
-  type RideStatus,
-  SeatMeter,
-  FareDisplay,
-  Chip,
-  ToggleOnline,
-  Navbar,
-} from "@/components/custom";
-import { Activity, ArrowRight, RefreshCw, Zap } from "lucide-react";
+import { FareEstimatorCard } from "@/features/rides";
+import { Button } from "@/components/ui/button";
+import { ShieldCheck, Clock, Coins, Zap, ArrowRight } from "lucide-react";
+import { cn } from "cn";
+
+function LandingNavbar() {
+  const { openModal } = useAuthModalStore();
+
+  return (
+    <header className="h-14 border-b border-border/70 px-4 sm:px-8 bg-white/90 dark:bg-zinc-950/90 backdrop-blur sticky top-0 z-30 flex items-center">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="size-7 rounded bg-black dark:bg-white text-white dark:text-black font-black flex items-center justify-center">
+            <Zap className="size-4 fill-current" />
+          </div>
+          <span className="font-extrabold text-base tracking-tight text-ink">
+            OiTesla
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => openModal("login")}
+            className="text-xs font-bold border-border h-8 px-3 rounded-lg cursor-pointer"
+          >
+            Sign In
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => openModal("register")}
+            className="text-xs font-bold h-8 px-3 rounded-lg bg-black text-white hover:bg-black-soft cursor-pointer"
+          >
+            <span>Get Started</span>
+            <ArrowRight className="size-3.5 ml-1" />
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function HeroBadge() {
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 dark:bg-zinc-900/90 border border-border shadow-xs text-xs font-semibold text-ink">
+      <Zap className="size-3.5 text-ink fill-current" />
+      <span>Auto Rickshaw Ride Sharing For DHAKA</span>
+    </div>
+  );
+}
+
+function HeroContent() {
+  return (
+    <div className="flex flex-col gap-3 max-w-lg">
+      <HeroBadge />
+      <h1 className="text-3xl sm:text-7xl font-extrabold tracking-tight text-ink leading-[1.12]">
+        Shared rides for Dhaka&apos;s battery Teslas.
+      </h1>
+      <p className="text-sm sm:text-base text-ink-secondary leading-relaxed">
+        Street-smart pooled commuting along fixed routes with guaranteed seats and transparent upfront fares.
+      </p>
+    </div>
+  );
+}
+
+function FeaturePill({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="p-5 sm:p-6 rounded-2xl bg-white/95 dark:bg-zinc-900/95 border border-border/80 backdrop-blur-md shadow-sm flex items-start gap-4">
+      <div className="size-11 rounded-xl bg-surface-subtle border border-border flex items-center justify-center shrink-0 shadow-xs">
+        <Icon className="size-5.5 text-ink" />
+      </div>
+      <div>
+        <h2 className="text-base sm:text-lg font-bold text-ink tracking-tight">{title}</h2>
+        <p className="text-xs sm:text-sm text-ink-secondary mt-1 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+function FeatureGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-7xl">
+      <FeaturePill
+        icon={Coins}
+        title="Share Ride, Save Money"
+        description="Split fares dynamically across shared route segments. Save up to 40% compared to solo rides."
+      />
+      <FeaturePill
+        icon={Clock}
+        title="Always Available"
+        description="High-frequency battery Teslas operating across major Dhaka hubs. Zero surge multipliers, anytime."
+      />
+      <FeaturePill
+        icon={ShieldCheck}
+        title="Safe & Secure"
+        description="Verified electric three-wheeler fleet, strict 3-passenger seating limit, and guaranteed route navigation."
+      />
+    </div>
+  );
+}
 
 export default function Home() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const hasHydrated = useHydrated();
 
-  const { data: health, isLoading, isError, refetch, isFetching } = useHealthCheck();
-  const [driverOnline, setDriverOnline] = useState(true);
-
-  // Redirect users visiting root landing page to their designated role dashboard if logged in
   useEffect(() => {
-    if (hasHydrated && isAuthenticated && user) {
-      if (user.role === "DRIVER") {
-        router.replace("/driver/dashboard");
-      } else {
-        router.replace("/dashboard");
-      }
-    }
+    if (!hasHydrated || !isAuthenticated || !user) return;
+    const path = user.role === "DRIVER" ? "/driver/dashboard" : "/dashboard";
+    router.replace(path);
   }, [hasHydrated, isAuthenticated, user, router]);
 
-  const sampleStatuses: RideStatus[] = [
-    "REQUESTED",
-    "MATCHED",
-    "DRIVER_ARRIVED",
-    "STARTED",
-    "COMPLETED",
-    "CANCELLED",
-  ];
-
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
+    <div className="min-h-[100dvh] flex flex-col bg-background text-foreground relative">
+      <LandingNavbar />
 
-      <main className="flex-1 flex flex-col items-center justify-start p-6 md:p-12">
-        <div className="w-full max-w-3xl flex flex-col gap-8">
-          {/* Hero Section */}
-          <header className="flex flex-col gap-4 text-center items-center py-6 sm:py-10">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-subtle text-ink-secondary border border-border text-xs font-semibold">
-              <Zap className="size-3.5 text-ink fill-black" />
-              <span>Dhaka Electric Three-Wheeler Pooling</span>
+      <main className="flex-1 relative flex flex-col justify-between overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/hero-rickshaw.jpg"
+            alt="Dhaka battery Tesla electric rickshaw graphic"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center filter contrast-[1.03]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/85 to-white/95 lg:bg-gradient-to-r lg:from-white/98 lg:via-white/90 lg:to-white/35 dark:from-zinc-950/98 dark:via-zinc-950/90 dark:to-zinc-950/35" />
+        </div>
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 py-8 sm:py-12 flex-1 flex flex-col justify-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7 space-y-6">
+              <HeroContent />
             </div>
 
-            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-ink max-w-xl">
-              Shared rides for Dhaka&apos;s battery Teslas.
-            </h1>
-
-            <p className="text-ink-secondary text-base sm:text-lg max-w-lg leading-relaxed">
-              Street-smart pooled commuting along fixed routes with fair distance-split pricing and capacity guarantees.
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-              <Link
-                href="/login"
-                className={buttonVariants({
-                  size: "lg",
-                  className: "font-semibold gap-2",
-                })}
-              >
-                <span>Sign In</span>
-                <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/register"
-                className={buttonVariants({
-                  variant: "secondary",
-                  size: "lg",
-                  className: "font-semibold",
-                })}
-              >
-                Create Account
-              </Link>
+            <div className="lg:col-span-5 w-full max-w-lg">
+              <FareEstimatorCard />
             </div>
-          </header>
+          </div>
+        </div>
 
-          {/* API Health Card */}
-          <Card className="border-border">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="size-5 text-ink" />
-                  <CardTitle>System & API Health</CardTitle>
-                </div>
-                {isLoading ? (
-                  <Skeleton className="h-6 w-20" />
-                ) : isError ? (
-                  <Badge variant="destructive">Backend Offline</Badge>
-                ) : (
-                  <Badge variant="started">
-                    {health?.status?.toUpperCase() || "ONLINE"}
-                  </Badge>
-                )}
-              </div>
-              <CardDescription>
-                Backend REST endpoint at <code className="text-xs">/api/health</code>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {isLoading ? (
-                <div className="flex flex-col gap-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                </div>
-              ) : isError ? (
-                <div className="p-3 rounded-[var(--radius-md)] bg-error-surface text-error text-sm border border-error/20 font-medium">
-                  Backend service is currently unreachable at <code className="text-xs">/api/health</code>. Ensure the server is running on port 8080.
-                </div>
-              ) : (
-                <div className="bg-surface-subtle p-4 rounded-[var(--radius-md)] text-sm flex flex-col gap-1">
-                  <div>
-                    <span className="text-ink-secondary">Message:</span>{" "}
-                    <span className="text-ink font-medium">{health?.message}</span>
-                  </div>
-                  <div>
-                    <span className="text-ink-secondary">Timestamp:</span>{" "}
-                    <span className="text-ink">{health?.timestamp}</span>
-                  </div>
-                  <div>
-                    <span className="text-ink-secondary">Uptime:</span>{" "}
-                    <span className="text-ink tabular-nums">
-                      {health?.uptime ? `${Math.round(health.uptime)}s` : "N/A"}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-            <CardFooter className="flex justify-between items-center">
-              <span className="text-xs text-ink-secondary">
-                {isFetching ? "Syncing..." : "Ready"}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isFetching}
-                onClick={() => refetch()}
-                className="gap-2"
-              >
-                <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin" : ""}`} />
-                Refetch Health
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* UI Design System Showcase */}
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle>Design System Elements (UI_DESIGN.md)</CardTitle>
-              <CardDescription>
-                Visual tokens, lifecycle indicators, and invariant meters
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-6">
-              {/* Ride State Badges */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-ink-secondary">
-                  1. Ride Lifecycle States (Fixed Pairings)
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {sampleStatuses.map((st) => (
-                    <StatusBadge key={st} status={st} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Invariants & Numbers */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-border p-4 rounded-[var(--radius-md)] bg-surface">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-ink-secondary">
-                    2. Seat Capacity Invariant (● ● ○)
-                  </span>
-                  <div className="flex items-center gap-3">
-                    <SeatMeter occupiedSeats={2} capacity={3} showCount />
-                    <span className="text-xs text-ink-secondary">occupied &le; capacity</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-1.5 sm:items-end">
-                  <span className="text-xs font-semibold text-ink-secondary">
-                    3. Fare Display (Tabular Numeral & Dynamic Savings)
-                  </span>
-                  <div className="flex flex-col sm:items-end gap-2">
-                    <FareDisplay
-                      paisa={10714}
-                      originalPaisa={15000}
-                      align="right"
-                      animateChange
-                    />
-                    <div className="text-[11px] text-ink-secondary flex items-center gap-1.5">
-                      <span>Solo rate:</span>
-                      <FareDisplay amount={150} size="sm" align="right" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Interactive Components */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-semibold text-ink-secondary">
-                  4. Driver Console Toggle & Chips
-                </span>
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-2">
-                    <ToggleOnline
-                      online={driverOnline}
-                      onToggle={setDriverOnline}
-                    />
-                    <span className="text-sm font-medium text-ink">
-                      {driverOnline ? "Console Online" : "Console Offline"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Chip selected>Cash</Chip>
-                    <Chip>TeslaPay</Chip>
-                    <Chip>Mirpur Route</Chip>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 pb-8 pt-2">
+          <FeatureGrid />
         </div>
       </main>
+
+      <AuthModal />
     </div>
   );
 }

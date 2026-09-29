@@ -8,6 +8,7 @@ export interface SeatStepperProps {
   onChange: (seats: number) => void;
   maxSeats?: number;
   disabled?: boolean;
+  size?: "default" | "lg";
   className?: string;
 }
 
@@ -64,6 +65,7 @@ export function SeatStepper({
   onChange,
   maxSeats = 4,
   disabled = false,
+  size = "default",
   className,
 }: SeatStepperProps) {
   const seatOptions = React.useMemo(() => {
@@ -74,22 +76,42 @@ export function SeatStepper({
     <div className={cn("space-y-2", className)}>
       {/* Header with Title and Live Count */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold uppercase tracking-wider text-ink-secondary">
+        <span
+          className={cn(
+            "font-bold uppercase tracking-wider text-ink",
+            size === "lg" ? "text-base" : "text-sm text-ink-secondary"
+          )}
+        >
           Seats
         </span>
 
         {/* Live Count Display */}
         <div
-          className="flex items-center gap-1.5 text-sm text-ink"
+          className="flex items-center gap-1.5 text-ink"
           aria-label={`${value} of ${maxSeats} seats selected`}
         >
-          <span className="font-bold text-primary font-mono text-base tabular-nums">
+          <span
+            className={cn(
+              "font-bold text-primary font-mono tabular-nums",
+              size === "lg" ? "text-lg" : "text-base"
+            )}
+          >
             {value}
           </span>
-          <span className="text-ink-secondary font-medium">
+          <span
+            className={cn(
+              "text-ink-secondary font-medium",
+              size === "lg" ? "text-base" : "text-sm"
+            )}
+          >
             {value === 1 ? "Seat" : "Seats"}
           </span>
-          <span className="text-xs text-ink-secondary font-mono tabular-nums">
+          <span
+            className={cn(
+              "text-ink-secondary font-mono tabular-nums",
+              size === "lg" ? "text-sm" : "text-xs"
+            )}
+          >
             ({value}/{maxSeats})
           </span>
         </div>
@@ -115,7 +137,8 @@ export function SeatStepper({
                 disabled={disabled}
                 onClick={() => onChange(seatNum)}
                 className={cn(
-                  "flex-1 h-11 rounded-lg flex items-center justify-center transition-all cursor-pointer select-none outline-none",
+                  "flex-1 rounded-lg flex items-center justify-center transition-all cursor-pointer select-none outline-none",
+                  size === "lg" ? "h-12" : "h-11",
                   "focus-visible:ring-2 focus-visible:ring-primary/20",
                   isFilled
                     ? "bg-primary text-primary-foreground font-bold shadow-xs hover:bg-[var(--color-primary-strong)]"
@@ -126,7 +149,8 @@ export function SeatStepper({
                 <SeatGlyph
                   filled={isFilled}
                   className={cn(
-                    "size-5 transition-transform duration-150",
+                    "transition-transform duration-150",
+                    size === "lg" ? "size-6" : "size-5",
                     isFilled ? "scale-105" : "scale-100"
                   )}
                 />

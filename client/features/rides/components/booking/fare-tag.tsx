@@ -11,6 +11,7 @@ export interface FareTagProps {
   estimate?: EstimateResponseDto | null;
   isLoading?: boolean;
   isError?: boolean;
+  size?: "default" | "lg";
   className?: string;
 }
 
@@ -18,6 +19,7 @@ export function FareTag({
   estimate,
   isLoading = false,
   isError = false,
+  size = "default",
   className,
 }: FareTagProps) {
   if (isLoading) {
@@ -32,7 +34,7 @@ export function FareTag({
   if (isError) {
     return (
       <div className={cn("p-2.5 rounded-[var(--radius-md)] bg-error-surface border border-error/20 text-sm text-error text-center font-medium", className)}>
-        Corridor route not available
+        Route not available
       </div>
     );
   }
@@ -44,16 +46,29 @@ export function FareTag({
   const distanceKm = (estimate.distanceM / 1000).toFixed(1);
 
   return (
-    <div className={cn("flex items-center justify-between py-2.5 px-3.5 rounded-[var(--radius-md)] bg-surface border border-border", className)}>
-      <div className="flex items-center gap-1.5 text-sm text-ink-secondary">
-        <Navigation className="size-4 text-ink" />
-        <span className="font-medium text-ink tabular-nums">{distanceKm} km</span>
+    <div
+      className={cn(
+        "flex items-center justify-between bg-surface border border-border",
+        size === "lg" ? "py-3 px-4 rounded-xl" : "py-2.5 px-3.5 rounded-[var(--radius-md)]",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2 text-ink-secondary">
+        <Navigation className={cn("text-ink", size === "lg" ? "size-5" : "size-4")} />
+        <span
+          className={cn(
+            "font-semibold text-ink tabular-nums",
+            size === "lg" ? "text-base" : "text-sm"
+          )}
+        >
+          {distanceKm} km
+        </span>
       </div>
 
       <div className="flex items-center gap-2">
         <FareDisplay
           paisa={estimate.soloFarePaisa}
-          size="default"
+          size={size === "lg" ? "default" : "sm"}
           align="right"
         />
       </div>

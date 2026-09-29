@@ -140,7 +140,7 @@ function ConsoleTopBar({
 
 function PassengerCancellationAlert({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs text-amber-900 shadow-xs animate-in fade-in slide-in-from-top-1">
+    <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-sm text-amber-900 shadow-xs animate-in fade-in slide-in-from-top-1">
       <div className="flex items-center gap-2">
         <AlertTriangle className="size-4 text-amber-600 shrink-0" />
         <span className="font-medium">
@@ -180,7 +180,7 @@ function PoolCancelledNotice({
         <button
           type="button"
           onClick={onReturnToFeed}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-white text-xs font-semibold rounded-lg hover:bg-black/90 transition shadow-xs cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-black text-white text-sm font-semibold rounded-lg hover:bg-black/90 transition shadow-xs cursor-pointer"
         >
           <ArrowLeft className="size-3.5" />
           Return to Open Pools Feed
@@ -218,7 +218,7 @@ function RouteCorridor({
             <span className="size-3.5 rounded-full border-2 border-black bg-white z-10" />
           </div>
           <div className="space-y-0.5 min-w-0">
-            <div className="text-xs text-ink-secondary">Pickup Point</div>
+            <div className="text-sm text-ink-secondary">Pickup Point</div>
             <div className="text-sm font-bold text-ink">{pickupLocationName}</div>
           </div>
         </div>
@@ -255,7 +255,7 @@ function RouteStopItem({
         <span className={`size-3.5 rounded-full border-2 ${dotClasses} z-10`} />
       </div>
       <div className="space-y-0.5 min-w-0">
-        <div className="text-xs text-ink-secondary">
+        <div className="text-sm text-ink-secondary">
           {isFinal ? "Final Stop" : `Stop ${stopIndex}`}
         </div>
         <div className="text-sm font-semibold text-ink">{stopName}</div>
@@ -375,7 +375,7 @@ function SettlementMetricsGrid({
   metrics: ReturnType<typeof calculateSettlementMetrics>;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 text-xs">
+    <div className="grid grid-cols-2 gap-2 text-sm">
       <div className="p-2.5 rounded-lg bg-surface-subtle border border-border space-y-1">
         <div className="text-ink-secondary text-[11px] font-medium">Cash Collected</div>
         <FareDisplay paisa={metrics.cashCollectedPaisa} size="sm" />
@@ -410,7 +410,7 @@ function SettlementStatusRow({
   pendingCount: number;
 }) {
   return (
-    <div className="flex items-center justify-between pt-1 border-t border-border/60 text-xs">
+    <div className="flex items-center justify-between pt-1 border-t border-border/60 text-sm">
       <span className="text-ink-secondary text-[11px]">Settlement Status</span>
       {allSettled ? (
         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -456,11 +456,11 @@ function ActivePoolError({
     <Card className="p-8 border border-red-200 bg-red-50/50 rounded-xl text-center space-y-3">
       <AlertCircle className="size-8 text-red-600 mx-auto" />
       <h3 className="text-sm font-bold text-red-900">Failed to load active pool</h3>
-      <p className="text-xs text-red-700 max-w-sm mx-auto">{errorMessage}</p>
+      <p className="text-sm text-red-700 max-w-sm mx-auto">{errorMessage}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="px-4 py-2 bg-black text-white text-xs font-semibold rounded-lg hover:bg-black/90 transition cursor-pointer"
+        className="px-4 py-2 bg-black text-white text-sm font-semibold rounded-lg hover:bg-black/90 transition cursor-pointer"
       >
         Retry
       </button>
