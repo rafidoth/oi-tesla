@@ -91,7 +91,7 @@ export const driverApi = {
   async getDriverPoolHistory(
     status?: string
   ): Promise<DriverPoolHistoryItem[]> {
-    const query = status ? `?status=${status}` : '';
+    const query = status ? `?status=${status}` : '?status=ALL';
     const response = await apiClient.get<DriverPoolHistoryItem[]>(
       baseUrlWrapper(`/driver/pools${query}`)
     );
