@@ -96,6 +96,7 @@ export default function DriverDashboardPage() {
         onRetry={() => refetch()}
         onToggleStatus={handleToggleStatus}
         isUpdatingStatus={updateStatusMutation.isPending}
+        hasActivePool={hasActivePool}
       />
 
       {hasActivePool && activePoolId ? (

@@ -559,8 +559,10 @@ export class DriverRepository {
     status?: string
   ): Promise<DriverPoolHistoryItem[]> {
     const conditions = [eq(pools.driverId, driverId)];
-    if (status) {
+    if (status && status !== 'ALL') {
       conditions.push(eq(pools.status, status));
+    } else {
+      conditions.push(inArray(pools.status, ['COMPLETED', 'CANCELLED']));
     }
     const poolRows = await this.dbClient
       .select({

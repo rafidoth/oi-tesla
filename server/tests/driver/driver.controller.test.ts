@@ -289,6 +289,46 @@ describe('DriverController Unit Tests', () => {
     expect(res.json).toHaveBeenCalledWith(mockHistory);
   });
 
+  it('fetches driver pool history for status=ALL and returns 200', async () => {
+    const mockHistory = [
+      {
+        id: 'pool-uuid-1',
+        pickupLocationId: 1,
+        pickupLocationName: 'Uttara',
+        status: 'COMPLETED',
+        capacity: 4,
+        occupiedSeats: 2,
+        passengerCount: 2,
+        totalEarningsPaisa: 70000,
+        destinationStops: [{ locationId: 3, locationName: 'Gulshan' }],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    mockDriverService.getDriverPoolHistory.mockResolvedValue(mockHistory);
+
+    const req = {
+      user: {
+        id: CAST.driver.id,
+        sub: CAST.driver.id,
+        email: CAST.driver.email,
+        role: 'DRIVER' as const,
+      },
+      query: {
+        status: 'ALL',
+      },
+    } as unknown as AuthenticatedRequest;
+
+    await controller.getDriverPools(req, res as Response, next);
+
+    expect(mockDriverService.getDriverPoolHistory).toHaveBeenCalledWith(
+      CAST.driver.id,
+      undefined
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(mockHistory);
+  });
+
   it('successfully declines a pool and returns 200', async () => {
     const expectedData = {
       success: true,

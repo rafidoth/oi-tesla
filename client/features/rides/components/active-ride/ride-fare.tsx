@@ -23,28 +23,28 @@ export function RideFare({
   const isTeslaPay = paymentMethod === "TESLAPAY";
 
   return (
-    <div className={cn("p-3.5 rounded-lg bg-surface border border-border flex items-center justify-between gap-4", className)}>
+    <div className={cn("p-3.5 rounded-xl bg-surface-subtle/80 flex items-center justify-between gap-4", className)}>
       <div className="space-y-1">
         <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-secondary">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-secondary">
             Your Fare
           </span>
           {(status === "STARTED" || status === "COMPLETED") && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-subtle border border-border text-ink-secondary">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-surface-subtle border border-border text-ink-secondary">
               <Lock className="size-2.5" />
               Final
             </span>
           )}
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-ink-secondary">
+        <div className="flex items-center gap-1.5 text-sm text-ink-secondary">
           {isTeslaPay ? (
             <>
-              <Zap className="size-3 text-ink fill-black shrink-0" />
+              <Zap className="size-3.5 text-ink fill-black shrink-0" />
               <span>TeslaPay</span>
             </>
           ) : (
             <>
-              <Banknote className="size-3 text-ink shrink-0" />
+              <Banknote className="size-3.5 text-ink shrink-0" />
               <span>Cash</span>
             </>
           )}

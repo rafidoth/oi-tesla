@@ -50,7 +50,8 @@ export class DriverController {
         return;
       }
 
-      const history = await this.driverService.getDriverPoolHistory(driverId, status);
+      const historyStatus = status === 'ALL' ? undefined : status;
+      const history = await this.driverService.getDriverPoolHistory(driverId, historyStatus);
       res.status(200).json(history);
     } catch (err) {
       next(err);

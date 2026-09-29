@@ -22,9 +22,9 @@ export function RideRoute({ pickupName, destName, className }: RideRouteProps) {
       {/* Origin */}
       <div className="relative flex items-center gap-3">
         <div className="absolute -left-6 size-5 rounded-full bg-surface-subtle text-ink border border-border-strong flex items-center justify-center shrink-0">
-          <CircleDot className="size-3 text-ink" />
+          <CircleDot className="size-3.5 text-ink" />
         </div>
-        <span className="text-sm font-semibold text-ink leading-tight">
+        <span className="text-base font-semibold text-ink leading-tight">
           {pickupName}
         </span>
       </div>
@@ -32,9 +32,9 @@ export function RideRoute({ pickupName, destName, className }: RideRouteProps) {
       {/* Destination */}
       <div className="relative flex items-center gap-3">
         <div className="absolute -left-6 size-5 rounded-full bg-black text-white border border-black flex items-center justify-center shrink-0">
-          <MapPin className="size-3 text-white" />
+          <MapPin className="size-3.5 text-white" />
         </div>
-        <span className="text-sm font-semibold text-ink leading-tight">
+        <span className="text-base font-semibold text-ink leading-tight">
           {destName}
         </span>
       </div>

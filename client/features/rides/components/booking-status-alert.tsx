@@ -45,7 +45,7 @@ export function BookingStatusAlert({
         data-slot="booking-status-alert-error"
         role="alert"
         className={cn(
-          "flex items-center justify-between gap-3 p-3 rounded-lg border border-destructive/25 bg-destructive/10 text-destructive text-xs",
+          "flex items-center justify-between gap-3 p-3 rounded-lg border border-destructive/25 bg-destructive/10 text-destructive text-sm",
           className
         )}
       >
@@ -61,7 +61,7 @@ export function BookingStatusAlert({
               variant="outline"
               size="sm"
               onClick={onRetry}
-              className="h-6 px-2 text-[11px] border-destructive/30 text-destructive hover:bg-destructive/15"
+              className="h-7 px-2.5 text-xs border-destructive/30 text-destructive hover:bg-destructive/15"
             >
               <RefreshCw className="size-3 mr-1" />
               Retry
@@ -86,7 +86,7 @@ export function BookingStatusAlert({
       <div
         data-slot="booking-status-alert-pool"
         className={cn(
-          "flex items-center justify-between gap-3 p-3 rounded-[var(--radius-md)] border border-info/20 bg-info-surface text-xs text-ink",
+          "flex items-center justify-between gap-3 p-3 rounded-[var(--radius-md)] border border-info/20 bg-info-surface text-sm text-ink",
           className
         )}
       >

@@ -51,7 +51,7 @@ export function RideHistoryCard({
       />
 
       {ride.cancelReason && (
-        <p className="text-[11px] text-muted italic">
+        <p className="text-xs text-muted italic">
           Reason: {ride.cancelReason}
         </p>
       )}
@@ -72,14 +72,14 @@ function CardHeaderRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5 text-sm font-bold text-ink truncate">
+      <div className="flex items-center gap-1.5 text-base font-bold text-ink truncate">
         <span className="truncate">{pickupName}</span>
         <ArrowRight className="size-3.5 text-muted shrink-0" />
         <span className="truncate">{destName}</span>
       </div>
       <div className="text-right shrink-0">
         <span
-          className={`font-extrabold text-sm ${
+          className={`font-extrabold text-base ${
             isCancelled ? "text-muted line-through" : "text-ink"
           }`}
         >
@@ -102,12 +102,12 @@ function CardMetaRow({
   const isCompleted = status === "COMPLETED";
 
   return (
-    <div className="flex items-center justify-between text-xs text-ink-secondary">
+    <div className="flex items-center justify-between text-sm text-ink-secondary">
       <span>
         {formatTripDate(createdAt)} • {seats} {seats === 1 ? "seat" : "seats"}
       </span>
       <span
-        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+        className={`px-2 py-0.5 rounded text-xs font-bold border ${
           isCompleted
             ? "bg-emerald-50 text-emerald-800 border-emerald-200"
             : "bg-surface-subtle text-muted border-border"
@@ -140,22 +140,22 @@ function CardPaymentRow({
 
   return (
     <div className="pt-2 border-t border-border/60 space-y-2">
-      <div className="flex items-center justify-between text-xs">
+      <div className="flex items-center justify-between text-sm">
         <PaymentBadge method={paymentMethod} status={paymentStatus} />
         {isPending && !hasError && (
-          <span className="text-[11px] font-semibold text-amber-700">
+          <span className="text-xs font-semibold text-amber-700">
             Settlement Pending
           </span>
         )}
       </div>
 
       {hasError && (
-        <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-xs text-destructive flex items-center justify-between">
+        <div className="p-2 rounded bg-destructive/10 border border-destructive/20 text-sm text-destructive flex items-center justify-between">
           <span>Settlement failed</span>
           <button
             type="button"
             onClick={onPay}
-            className="font-bold underline cursor-pointer"
+            className="font-bold underline text-sm cursor-pointer"
           >
             Retry
           </button>
@@ -168,7 +168,7 @@ function CardPaymentRow({
           size="sm"
           onClick={onPay}
           disabled={isSettling}
-          className="w-full bg-black text-white hover:bg-neutral-800 font-bold text-xs h-8 gap-1.5 cursor-pointer"
+          className="w-full bg-black text-white hover:bg-neutral-800 font-bold text-sm h-8.5 gap-1.5 cursor-pointer"
         >
           {isSettling ? (
             <Loader2 className="size-3.5 animate-spin" />
@@ -191,7 +191,7 @@ function PaymentBadge({
 }) {
   if (method === "CASH") {
     return (
-      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-subtle border border-border text-ink-secondary">
+      <span className="px-2 py-0.5 rounded text-xs font-semibold bg-surface-subtle border border-border text-ink-secondary">
         Cash
       </span>
     );
@@ -200,7 +200,7 @@ function PaymentBadge({
   const isPaid = status === "PAID";
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border ${
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${
         isPaid
           ? "bg-emerald-50 text-emerald-800 border-emerald-200"
           : "bg-amber-50 text-amber-800 border-amber-200"

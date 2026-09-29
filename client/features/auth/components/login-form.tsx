@@ -84,13 +84,15 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-none border-border/80 bg-white">
+    <Card className="w-full max-w-md shadow-none border-border bg-white">
       <CardHeader className="space-y-2 text-center pb-6">
-        <div className="flex justify-center items-center gap-2 text-primary font-heading font-bold text-xl tracking-tight">
-          <Zap className="size-5 fill-primary" />
+        <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
+          <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
+            <Zap className="size-4.5 fill-white text-white" />
+          </div>
           <span>OiTesla</span>
         </div>
-        <CardTitle className="font-heading text-2xl font-bold tracking-tight text-ink">
+        <CardTitle className="text-2xl font-bold tracking-tight text-ink">
           Log in to your account
         </CardTitle>
         <CardDescription className="text-ink-secondary text-sm">
@@ -102,7 +104,7 @@ export function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Success message on redirect from register */}
           {registered && (
-            <div className="p-3 rounded-[var(--radius-md)] bg-accent-green-surface text-accent-green border border-accent-green/30 flex items-start gap-2.5 text-sm">
+            <div className="p-3 rounded-[var(--radius-md)] bg-success-surface text-success border border-success/30 flex items-start gap-2.5 text-sm">
               <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
               <span>Registration successful! Please log in with your credentials.</span>
             </div>
@@ -110,15 +112,15 @@ export function LoginForm() {
 
           {/* Session expired message */}
           {expired && (
-            <div className="p-3 rounded-[var(--radius-md)] bg-accent-amber-surface text-ink border border-accent-amber/40 flex items-start gap-2.5 text-sm">
-              <AlertCircle className="size-4 text-accent-amber shrink-0 mt-0.5" />
+            <div className="p-3 rounded-[var(--radius-md)] bg-warning-surface text-warning border border-warning/40 flex items-start gap-2.5 text-sm">
+              <AlertCircle className="size-4 text-warning shrink-0 mt-0.5" />
               <span>Your session has expired. Please sign in again.</span>
             </div>
           )}
 
           {/* General error message */}
           {generalError && (
-            <div className="p-3 rounded-[var(--radius-md)] bg-accent-red-surface text-accent-red border border-accent-red/20 flex items-start gap-2.5 text-sm font-medium">
+            <div className="p-3 rounded-[var(--radius-md)] bg-error-surface text-error border border-error/20 flex items-start gap-2.5 text-sm font-medium">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
@@ -143,7 +145,7 @@ export function LoginForm() {
               aria-invalid={!!errors.email}
             />
             {errors.email && (
-              <p className="text-xs text-accent-red font-medium mt-1">
+              <p className="text-xs text-error font-medium mt-1">
                 {errors.email}
               </p>
             )}
@@ -174,7 +176,7 @@ export function LoginForm() {
               aria-invalid={!!errors.password}
             />
             {errors.password && (
-              <p className="text-xs text-accent-red font-medium mt-1">
+              <p className="text-xs text-error font-medium mt-1">
                 {errors.password}
               </p>
             )}
@@ -183,7 +185,7 @@ export function LoginForm() {
           {/* Submit button */}
           <Button
             type="submit"
-            className="w-full mt-2 font-medium"
+            className="w-full mt-2 font-semibold"
             disabled={loginMutation.isPending}
           >
             {loginMutation.isPending ? (
@@ -198,12 +200,12 @@ export function LoginForm() {
         </form>
       </CardContent>
 
-      <CardFooter className="flex justify-center border-t border-surface-subtle pt-4">
+      <CardFooter className="flex justify-center border-t border-border pt-4">
         <p className="text-sm text-ink-secondary">
           Don&apos;t have an account?{" "}
           <Link
             href="/register"
-            className="font-semibold text-primary hover:text-primary-strong transition-colors"
+            className="font-semibold text-ink hover:underline transition-colors"
           >
             Sign up
           </Link>

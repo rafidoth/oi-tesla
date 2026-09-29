@@ -31,7 +31,7 @@ export function FareTag({
 
   if (isError) {
     return (
-      <div className={cn("p-2.5 rounded-[var(--radius-md)] bg-error-surface border border-error/20 text-xs text-error text-center font-medium", className)}>
+      <div className={cn("p-2.5 rounded-[var(--radius-md)] bg-error-surface border border-error/20 text-sm text-error text-center font-medium", className)}>
         Corridor route not available
       </div>
     );
@@ -45,8 +45,8 @@ export function FareTag({
 
   return (
     <div className={cn("flex items-center justify-between py-2.5 px-3.5 rounded-[var(--radius-md)] bg-surface border border-border", className)}>
-      <div className="flex items-center gap-1.5 text-xs text-ink-secondary">
-        <Navigation className="size-3.5 text-ink" />
+      <div className="flex items-center gap-1.5 text-sm text-ink-secondary">
+        <Navigation className="size-4 text-ink" />
         <span className="font-medium text-ink tabular-nums">{distanceKm} km</span>
       </div>
 

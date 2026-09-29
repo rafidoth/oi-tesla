@@ -9,24 +9,24 @@ import {
   DrawerDescription,
   DrawerTrigger,
 } from "@/components/ui/drawer";
-import { useRideHistory, type RideHistoryFilter } from "./use-ride-history";
-import { RideHistoryCard } from "./ride-history-card";
-import { RideHistorySkeleton } from "./ride-history-skeleton";
-import { RideHistoryEmpty } from "./ride-history-empty";
-import type { PassengerRideHistoryItemDto } from "../../types/rides.types";
+import { useDriverHistory, type DriverHistoryFilter } from "./use-driver-history";
+import { DriverPoolHistoryCard } from "./driver-pool-history-card";
+import { DriverPoolHistorySkeleton } from "./driver-pool-history-skeleton";
+import { DriverPoolHistoryEmpty } from "./driver-pool-history-empty";
+import type { DriverPoolHistoryItem } from "../../types/driver.types";
 
-export interface RideHistoryDrawerProps {
+export interface DriverPoolHistoryDrawerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
 }
 
-export function RideHistoryDrawer({
+export function DriverPoolHistoryDrawer({
   open,
   onOpenChange,
   trigger,
-}: RideHistoryDrawerProps) {
-  const history = useRideHistory();
+}: DriverPoolHistoryDrawerProps) {
+  const history = useDriverHistory();
   const isControlled = open !== undefined;
   const currentOpen = isControlled ? open : history.isOpen;
   const handleOpenChange = isControlled ? onOpenChange : history.setIsOpen;
@@ -50,14 +50,14 @@ export function RideHistoryDrawer({
           <div className="flex items-center justify-between">
             <div>
               <DrawerTitle className="text-lg font-bold text-ink">
-                Past Rides
+                Past Pools
               </DrawerTitle>
-              <DrawerDescription className="text-sm text-ink-secondary">
-                Dhaka Tesla Pool trip history and settlements
+              <DrawerDescription className="text-xs text-ink-secondary">
+                Dhaka Tesla Pool trip history and earnings
               </DrawerDescription>
             </div>
-            <span className="text-sm font-semibold px-2.5 py-0.5 rounded-full bg-surface-subtle border border-border text-ink-secondary">
-              {history.rides.length} {history.rides.length === 1 ? "trip" : "trips"}
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-subtle border border-border text-ink-secondary">
+              {history.pools.length} {history.pools.length === 1 ? "pool" : "pools"}
             </span>
           </div>
         </DrawerHeader>
@@ -67,13 +67,10 @@ export function RideHistoryDrawer({
           onSelectFilter={history.setFilter}
         />
 
-        <DrawerTripList
+        <DrawerPoolList
           isLoading={history.isLoading}
-          rides={history.rides}
+          pools={history.pools}
           filter={history.filter}
-          settlingRideId={history.settlingRideId}
-          failedRideId={history.failedRideId}
-          onPay={history.handlePay}
         />
       </DrawerContent>
     </Drawer>
@@ -84,17 +81,17 @@ function DrawerFilterBar({
   currentFilter,
   onSelectFilter,
 }: {
-  currentFilter: RideHistoryFilter;
-  onSelectFilter: (filter: RideHistoryFilter) => void;
+  currentFilter: DriverHistoryFilter;
+  onSelectFilter: (filter: DriverHistoryFilter) => void;
 }) {
-  const filters: { label: string; value: RideHistoryFilter }[] = [
+  const filters: { label: string; value: DriverHistoryFilter }[] = [
     { label: "All", value: "ALL" },
     { label: "Completed", value: "COMPLETED" },
     { label: "Cancelled", value: "CANCELLED" },
   ];
 
   return (
-    <div className="p-3 bg-surface-subtle mx-4 my-2.5 rounded-xl flex gap-1 text-sm font-bold text-center shrink-0">
+    <div className="p-3 bg-surface-subtle mx-4 my-2.5 rounded-xl flex gap-1 text-xs font-bold text-center shrink-0">
       {filters.map((tab) => (
         <button
           key={tab.value}
@@ -113,38 +110,28 @@ function DrawerFilterBar({
   );
 }
 
-function DrawerTripList({
+function DrawerPoolList({
   isLoading,
-  rides,
+  pools,
   filter,
-  settlingRideId,
-  failedRideId,
-  onPay,
 }: {
   isLoading: boolean;
-  rides: PassengerRideHistoryItemDto[];
-  filter: RideHistoryFilter;
-  settlingRideId: string | null;
-  failedRideId: string | null;
-  onPay: (rideId: string) => void;
+  pools: DriverPoolHistoryItem[];
+  filter: DriverHistoryFilter;
 }) {
   return (
     <div className="px-4 pb-6 overflow-y-auto flex-1 space-y-2.5 min-h-[220px]">
       {isLoading ? (
-        <RideHistorySkeleton />
-      ) : rides.length === 0 ? (
-        <RideHistoryEmpty filter={filter} />
+        <DriverPoolHistorySkeleton />
+      ) : pools.length === 0 ? (
+        <DriverPoolHistoryEmpty filter={filter} />
       ) : (
-        rides.map((ride) => (
-          <RideHistoryCard
-            key={ride.id}
-            ride={ride}
-            isSettling={settlingRideId === ride.id}
-            hasError={failedRideId === ride.id}
-            onPay={onPay}
-          />
+        pools.map((pool) => (
+          <DriverPoolHistoryCard key={pool.id} pool={pool} />
         ))
       )}
     </div>
   );
 }
+
+export default DriverPoolHistoryDrawer;

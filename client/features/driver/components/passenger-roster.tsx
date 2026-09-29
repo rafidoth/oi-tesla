@@ -52,7 +52,7 @@ function RosterHeader({
   return (
     <div className="flex items-center justify-between pb-2 border-b border-border/40">
       <h3 className="text-xs font-bold text-ink uppercase tracking-wider">
-        {isCompleted ? "Settlement Roster" : "Passenger Roster"}
+        {isCompleted ? "Settlement Roster" : "Passengers"}
       </h3>
       <span className="text-xs font-semibold tabular-nums text-ink-secondary">
         {count} {count === 1 ? "passenger" : "passengers"} confirmed
@@ -248,10 +248,10 @@ function PassengerFareBlock({
 }) {
   const isTeslaPay = paymentMethod === "TESLAPAY";
   return (
-    <div className="text-right shrink-0 space-y-1">
+    <div className="flex flex-col items-end shrink-0 gap-1.5">
       <FareDisplay paisa={farePaisa} size="sm" align="right" />
       <span
-        className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded border ${
+        className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded border ${
           isTeslaPay
             ? "bg-sky-50 text-sky-800 border-sky-200"
             : "bg-neutral-100 text-neutral-700 border-neutral-200"
@@ -274,9 +274,9 @@ function PassengerDetailsRow({
   return (
     <div className="flex items-center justify-between text-xs pt-2.5 border-t border-border/50">
       <span className="font-mono text-[11px] text-ink-secondary bg-surface-subtle px-2 py-0.5 rounded border border-border/40">
-        {member.seats} {member.seats === 1 ? "seat" : "seats"} allocated
+        {member.seats} {member.seats === 1 ? "seat" : "seats"}
       </span>
-      {isCompleted ? (
+      {isCompleted && (
         <span
           className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${
             isPaid
@@ -286,10 +286,6 @@ function PassengerDetailsRow({
         >
           {isPaid && <Check className="size-3 text-emerald-600" />}
           {isPaid ? "Paid" : "Pending Settlement"}
-        </span>
-      ) : (
-        <span className="text-[11px] font-medium text-ink-secondary">
-          Confirmed Rider
         </span>
       )}
     </div>
@@ -308,7 +304,7 @@ function RosterFooter({
     <div className="pt-3 border-t border-border/60 flex items-center justify-between">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-semibold text-ink-secondary">
-          {isStarted ? "Final Pool Value" : "Total Pool Value"}
+          Total
         </span>
         {isStarted && (
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-surface border border-border text-ink-secondary">

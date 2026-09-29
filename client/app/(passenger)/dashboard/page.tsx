@@ -32,9 +32,9 @@ export default function PassengerDashboardPage() {
     <div className="max-w-xl mx-auto space-y-6 pb-12">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-1.5 text-xs text-ink-secondary font-medium">
-            <Zap className="size-3 fill-black text-black" />
-            <span>Tesla Pool</span>
+          <div className="flex items-center gap-1.5 text-sm text-ink-secondary font-medium">
+            <Zap className="size-3.5 fill-black text-black" />
+            <span>Passenger</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-ink mt-0.5">
             {userName}
@@ -46,7 +46,7 @@ export default function PassengerDashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs font-semibold h-8 px-3 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
+              className="gap-1.5 text-sm font-semibold h-8.5 px-3 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
             >
               <Clock className="size-3.5 text-ink-secondary" />
               <span>Past Rides</span>
