@@ -9,15 +9,25 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { AlertCircle, CheckCircle2, Loader2, Zap } from "lucide-react";
 import { useLoginMutation } from "../hooks/use-login-mutation";
+import { cn } from "cn";
 
-export function LoginForm() {
+export interface LoginFormProps {
+  onSuccess?: () => void;
+  onSwitchToRegister?: () => void;
+  showHeader?: boolean;
+}
+
+export function LoginForm({
+  onSuccess,
+  onSwitchToRegister,
+  showHeader = true,
+}: LoginFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const registered = searchParams.get("registered");
@@ -63,6 +73,10 @@ export function LoginForm() {
         password,
       });
 
+      if (onSuccess) {
+        onSuccess();
+      }
+
       if (returnUrl) {
         router.push(returnUrl);
       } else if (data.user.role === "DRIVER") {
@@ -84,23 +98,22 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-none border-border bg-white">
-      <CardHeader className="space-y-2 text-center pb-6">
-        <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
-          <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
-            <Zap className="size-4.5 fill-white text-white" />
+    <Card className={cn("w-full shadow-none", showHeader ? "max-w-md border-border bg-white" : "border-0 shadow-none bg-transparent p-0")}>
+      {showHeader && (
+        <CardHeader className="space-y-2 text-center pb-6">
+          <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
+            <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
+              <Zap className="size-4.5 fill-white text-white" />
+            </div>
+            <span>OiTesla</span>
           </div>
-          <span>OiTesla</span>
-        </div>
-        <CardTitle className="text-2xl font-bold tracking-tight text-ink">
-          Log in to your account
-        </CardTitle>
-        <CardDescription className="text-ink-secondary text-sm">
-          Pooled rides for Dhaka&apos;s electric three-wheelers
-        </CardDescription>
-      </CardHeader>
+          <CardTitle className="text-2xl font-bold tracking-tight text-ink">
+            Log in to your account
+          </CardTitle>
+        </CardHeader>
+      )}
 
-      <CardContent>
+      <CardContent className={showHeader ? "" : "p-0"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Success message on redirect from register */}
           {registered && (
@@ -200,15 +213,25 @@ export function LoginForm() {
         </form>
       </CardContent>
 
-      <CardFooter className="flex justify-center border-t border-border pt-4">
+      <CardFooter className={cn("flex justify-center border-t border-border pt-4", !showHeader && "border-t-0 pt-2 px-0")}>
         <p className="text-sm text-ink-secondary">
           Don&apos;t have an account?{" "}
-          <Link
-            href="/register"
-            className="font-semibold text-ink hover:underline transition-colors"
-          >
-            Sign up
-          </Link>
+          {onSwitchToRegister ? (
+            <button
+              type="button"
+              onClick={onSwitchToRegister}
+              className="font-semibold text-ink hover:underline transition-colors cursor-pointer"
+            >
+              Sign up
+            </button>
+          ) : (
+            <Link
+              href="/register"
+              className="font-semibold text-ink hover:underline transition-colors"
+            >
+              Sign up
+            </Link>
+          )}
         </p>
       </CardFooter>
     </Card>

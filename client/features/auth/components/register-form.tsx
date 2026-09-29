@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -17,6 +16,7 @@ import {
 import { AlertCircle, Car, Loader2, User as UserIcon, Zap } from "lucide-react";
 import { useRegisterMutation } from "../hooks/use-register-mutation";
 import type { UserRole } from "../types/auth.types";
+import { cn } from "cn";
 
 interface FormErrors {
   name?: string;
@@ -27,11 +27,25 @@ interface FormErrors {
   vehicleCapacity?: string;
 }
 
-export function RegisterForm() {
+export interface RegisterFormProps {
+  onSuccess?: () => void;
+  onSwitchToLogin?: () => void;
+  showHeader?: boolean;
+  initialRole?: UserRole;
+  onRoleChange?: (role: UserRole) => void;
+}
+
+export function RegisterForm({
+  onSuccess,
+  onSwitchToLogin,
+  showHeader = true,
+  initialRole,
+  onRoleChange,
+}: RegisterFormProps = {}) {
   const router = useRouter();
   const registerMutation = useRegisterMutation();
 
-  const [role, setRole] = useState<UserRole>("PASSENGER");
+  const [role, setRole] = useState<UserRole>(initialRole ?? "PASSENGER");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,6 +55,21 @@ export function RegisterForm() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialRole) setRole(initialRole);
+  }, [initialRole]);
+
+  const handleRoleSelect = (nextRole: UserRole) => {
+    setRole(nextRole);
+    onRoleChange?.(nextRole);
+    setErrors((prev) => ({
+      ...prev,
+      vehicleName: undefined,
+      vehicleRegNo: undefined,
+      vehicleCapacity: undefined,
+    }));
+  };
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -104,7 +133,11 @@ export function RegisterForm() {
             : undefined,
       });
 
-      router.push("/login?registered=true");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/login?registered=true");
+      }
     } catch (err: unknown) {
       const axiosError = err as {
         response?: { data?: { error?: { message?: string } } };
@@ -119,23 +152,22 @@ export function RegisterForm() {
   };
 
   return (
-    <Card className="w-full max-w-lg shadow-none border-border bg-white">
-      <CardHeader className="space-y-2 text-center pb-6">
-        <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
-          <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
-            <Zap className="size-4.5 fill-white text-white" />
+    <Card className={cn("w-full shadow-none", showHeader ? "max-w-lg border-border bg-white" : "border-0 shadow-none bg-transparent p-0")}>
+      {showHeader && (
+        <CardHeader className="space-y-2 text-center pb-6">
+          <div className="flex justify-center items-center gap-2 text-ink font-bold text-xl tracking-tight">
+            <div className="size-8 rounded-[var(--radius-sm)] bg-black flex items-center justify-center text-white">
+              <Zap className="size-4.5 fill-white text-white" />
+            </div>
+            <span>OiTesla</span>
           </div>
-          <span>OiTesla</span>
-        </div>
-        <CardTitle className="text-2xl font-bold tracking-tight text-ink">
-          Create your account
-        </CardTitle>
-        <CardDescription className="text-ink-secondary text-sm">
-          Join Dhaka&apos;s battery-run electric pooling network
-        </CardDescription>
-      </CardHeader>
+          <CardTitle className="text-2xl font-bold tracking-tight text-ink">
+            Create your account
+          </CardTitle>
+        </CardHeader>
+      )}
 
-      <CardContent>
+      <CardContent className={showHeader ? "" : "p-0"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* General error banner */}
           {generalError && (
@@ -151,15 +183,7 @@ export function RegisterForm() {
             <div className="grid grid-cols-2 gap-2 p-1 bg-surface-subtle rounded-[var(--radius-md)]">
               <button
                 type="button"
-                onClick={() => {
-                  setRole("PASSENGER");
-                  setErrors((prev) => ({
-                    ...prev,
-                    vehicleName: undefined,
-                    vehicleRegNo: undefined,
-                    vehicleCapacity: undefined,
-                  }));
-                }}
+                onClick={() => handleRoleSelect("PASSENGER")}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-[var(--radius-sm)] text-sm font-medium transition-all ${
                   role === "PASSENGER"
                     ? "bg-surface text-ink shadow-sm border border-border/80"
@@ -172,7 +196,7 @@ export function RegisterForm() {
 
               <button
                 type="button"
-                onClick={() => setRole("DRIVER")}
+                onClick={() => handleRoleSelect("DRIVER")}
                 className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-[var(--radius-sm)] text-sm font-medium transition-all ${
                   role === "DRIVER"
                     ? "bg-surface text-ink shadow-sm border border-border/80"
@@ -185,52 +209,55 @@ export function RegisterForm() {
             </div>
           </div>
 
-          {/* Full Name */}
-          <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs font-semibold text-ink">
-              Full Name
-            </Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="e.g. Nusrat Jahan"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-              }}
-              disabled={registerMutation.isPending}
-              aria-invalid={!!errors.name}
-            />
-            {errors.name && (
-              <p className="text-xs text-error font-medium mt-1">
-                {errors.name}
-              </p>
-            )}
-          </div>
+          {/* Name & Email (2-col grid on wider screens) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs font-semibold text-ink">
+                Full Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="e.g. Nusrat Jahan"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                }}
+                disabled={registerMutation.isPending}
+                aria-invalid={!!errors.name}
+              />
+              {errors.name && (
+                <p className="text-xs text-error font-medium mt-1">
+                  {errors.name}
+                </p>
+              )}
+            </div>
 
-          {/* Email */}
-          <div className="space-y-1.5">
-            <Label htmlFor="reg-email" className="text-xs font-semibold text-ink">
-              Email Address
-            </Label>
-            <Input
-              id="reg-email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
-              }}
-              disabled={registerMutation.isPending}
-              aria-invalid={!!errors.email}
-            />
-            {errors.email && (
-              <p className="text-xs text-error font-medium mt-1">
-                {errors.email}
-              </p>
-            )}
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="reg-email" className="text-xs font-semibold text-ink">
+                Email Address
+              </Label>
+              <Input
+                id="reg-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                disabled={registerMutation.isPending}
+                aria-invalid={!!errors.email}
+              />
+              {errors.email && (
+                <p className="text-xs text-error font-medium mt-1">
+                  {errors.email}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Password */}
@@ -258,7 +285,6 @@ export function RegisterForm() {
             )}
           </div>
 
-          {/* Dynamic Vehicle Fields (DRIVER ONLY) */}
           {role === "DRIVER" && (
             <div className="space-y-3 pt-3 border-t border-border transition-all">
               <div className="flex items-center gap-2">
@@ -268,18 +294,18 @@ export function RegisterForm() {
                 </h4>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="vehicleName"
                     className="text-xs font-semibold text-ink"
                   >
-                    Vehicle Name / Model
+                    Vehicle Model
                   </Label>
                   <Input
                     id="vehicleName"
                     type="text"
-                    placeholder="e.g. Bullet"
+                    placeholder="e.g. Bullet / Tomtom"
                     value={vehicleName}
                     onChange={(e) => {
                       setVehicleName(e.target.value);
@@ -301,7 +327,7 @@ export function RegisterForm() {
                     htmlFor="vehicleRegNo"
                     className="text-xs font-semibold text-ink"
                   >
-                    Registration Number
+                    Reg Number
                   </Label>
                   <Input
                     id="vehicleRegNo"
@@ -325,16 +351,14 @@ export function RegisterForm() {
                     </p>
                   )}
                 </div>
-              </div>
 
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="vehicleCapacity"
-                  className="text-xs font-semibold text-ink"
-                >
-                  Seating Capacity (Max Seats)
-                </Label>
-                <div className="flex items-center gap-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="vehicleCapacity"
+                    className="text-xs font-semibold text-ink"
+                  >
+                    Capacity (1–6 Seats)
+                  </Label>
                   <Input
                     id="vehicleCapacity"
                     type="number"
@@ -350,18 +374,15 @@ export function RegisterForm() {
                         }));
                     }}
                     disabled={registerMutation.isPending}
-                    className="w-24 tabular-nums"
+                    className="tabular-nums"
                     aria-invalid={!!errors.vehicleCapacity}
                   />
-                  <span className="text-xs text-ink-secondary">
-                    Default 3 for standard electric three-wheelers (1–6 seats)
-                  </span>
+                  {errors.vehicleCapacity && (
+                    <p className="text-xs text-error font-medium mt-1">
+                      {errors.vehicleCapacity}
+                    </p>
+                  )}
                 </div>
-                {errors.vehicleCapacity && (
-                  <p className="text-xs text-error font-medium mt-1">
-                    {errors.vehicleCapacity}
-                  </p>
-                )}
               </div>
             </div>
           )}
@@ -384,15 +405,25 @@ export function RegisterForm() {
         </form>
       </CardContent>
 
-      <CardFooter className="flex justify-center border-t border-border pt-4">
+      <CardFooter className={cn("flex justify-center border-t border-border pt-4", !showHeader && "border-t-0 pt-2 px-0")}>
         <p className="text-sm text-ink-secondary">
           Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-semibold text-ink hover:underline transition-colors"
-          >
-            Log in
-          </Link>
+          {onSwitchToLogin ? (
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="font-semibold text-ink hover:underline transition-colors cursor-pointer"
+            >
+              Log in
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="font-semibold text-ink hover:underline transition-colors"
+            >
+              Log in
+            </Link>
+          )}
         </p>
       </CardFooter>
     </Card>
