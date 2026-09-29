@@ -22,7 +22,7 @@ export function DriverOffDutyBanner({
           </div>
           <div>
             <h4 className="text-sm font-bold text-ink">You are currently off duty</h4>
-            <p className="text-xs text-ink-secondary mt-0.5">
+            <p className="text-sm text-ink-secondary mt-0.5">
               Switch your status to online to start discovering and receiving open passenger ride pools.
             </p>
           </div>
@@ -31,7 +31,7 @@ export function DriverOffDutyBanner({
           size="sm"
           disabled={isUpdating}
           onClick={onGoOnline}
-          className="shrink-0 text-xs font-semibold bg-black hover:bg-black/90 text-white"
+          className="shrink-0 text-sm font-semibold bg-black hover:bg-black/90 text-white"
         >
           {isUpdating ? "Switching..." : "Go Online"}
         </Button>

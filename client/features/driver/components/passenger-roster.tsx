@@ -51,10 +51,10 @@ function RosterHeader({
 }) {
   return (
     <div className="flex items-center justify-between pb-2 border-b border-border/40">
-      <h3 className="text-xs font-bold text-ink uppercase tracking-wider">
+      <h3 className="text-sm font-bold text-ink uppercase tracking-wider">
         {isCompleted ? "Settlement Roster" : "Passengers"}
       </h3>
-      <span className="text-xs font-semibold tabular-nums text-ink-secondary">
+      <span className="text-sm font-semibold tabular-nums text-ink-secondary">
         {count} {count === 1 ? "passenger" : "passengers"} confirmed
       </span>
     </div>
@@ -70,7 +70,7 @@ function RosterStatusAlert({
 }) {
   if (isCompleted) {
     return (
-      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-ink">
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-sm text-ink">
         <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
         <span className="font-medium">Trip Completed · Pending payment records initialized</span>
       </div>
@@ -78,7 +78,7 @@ function RosterStatusAlert({
   }
   if (isStarted) {
     return (
-      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-subtle border border-border/80 text-xs text-ink-secondary">
+      <div className="flex items-center gap-2 p-2.5 rounded-lg bg-surface-subtle border border-border/80 text-sm text-ink-secondary">
         <Lock className="size-3.5 text-ink shrink-0" />
         <span>Fares permanently locked · Trip in motion</span>
       </div>
@@ -173,7 +173,7 @@ function PassengerIdentity({
             />
           )}
         </div>
-        <div className="text-xs text-ink-secondary truncate flex items-center gap-1">
+        <div className="text-sm text-ink-secondary truncate flex items-center gap-1">
           <span className="font-medium text-ink">{member.pickupLocationName}</span>
           <span className="text-ink-secondary/60">→</span>
           <span className="font-semibold text-ink">{member.destLocationName}</span>
@@ -233,7 +233,7 @@ function CashCollectionButton({
 
 function PassengerAvatar({ name }: { name: string }) {
   return (
-    <div className="size-9 rounded-full bg-surface-subtle border border-border flex items-center justify-center font-bold text-xs text-ink shrink-0">
+    <div className="size-9 rounded-full bg-surface-subtle border border-border flex items-center justify-center font-bold text-sm text-ink shrink-0">
       {formatInitials(name)}
     </div>
   );
@@ -272,7 +272,7 @@ function PassengerDetailsRow({
 }) {
   const isPaid = member.paymentStatus === "PAID";
   return (
-    <div className="flex items-center justify-between text-xs pt-2.5 border-t border-border/50">
+    <div className="flex items-center justify-between text-sm pt-2.5 border-t border-border/50">
       <span className="font-mono text-[11px] text-ink-secondary bg-surface-subtle px-2 py-0.5 rounded border border-border/40">
         {member.seats} {member.seats === 1 ? "seat" : "seats"}
       </span>
@@ -303,7 +303,7 @@ function RosterFooter({
   return (
     <div className="pt-3 border-t border-border/60 flex items-center justify-between">
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-semibold text-ink-secondary">
+        <span className="text-sm font-semibold text-ink-secondary">
           Total
         </span>
         {isStarted && (
@@ -320,7 +320,7 @@ function RosterFooter({
 
 function RosterEmptyState() {
   return (
-    <div className="p-8 text-center rounded-xl bg-surface-subtle/50 border border-dashed border-border text-xs text-ink-secondary space-y-2">
+    <div className="p-8 text-center rounded-xl bg-surface-subtle/50 border border-dashed border-border text-sm text-ink-secondary space-y-2">
       <Users className="size-6 text-ink-secondary/60 mx-auto" />
       <div>No active passengers assigned to this pool.</div>
     </div>

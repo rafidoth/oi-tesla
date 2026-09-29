@@ -78,7 +78,7 @@ function CardMetaRow({
   const isCompleted = status === "COMPLETED";
 
   return (
-    <div className="flex items-center justify-between text-xs text-ink-secondary">
+    <div className="flex items-center justify-between text-sm text-ink-secondary">
       <span>
         {formatTripDate(createdAt)} • {passengerCount} {passengerCount === 1 ? "passenger" : "passengers"} ({occupiedSeats} seats)
       </span>

@@ -43,7 +43,7 @@ export function OpenPoolsFeed({
         <div className="flex items-center gap-2.5">
           <h2 className="text-base font-bold text-ink">Available Pools</h2>
           {pools && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-muted text-ink border border-border">
+            <span className="px-2 py-0.5 rounded-full text-sm font-semibold bg-surface-muted text-ink border border-border">
               {pools.length}
             </span>
           )}
@@ -55,7 +55,7 @@ export function OpenPoolsFeed({
             size="sm"
             onClick={onRefresh}
             disabled={isLoading || isFetching}
-            className="text-xs h-8 gap-1.5 text-ink-secondary hover:text-ink cursor-pointer"
+            className="text-sm h-8 gap-1.5 text-ink-secondary hover:text-ink cursor-pointer"
           >
             <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin" : ""}`} />
             <span>Refresh</span>
@@ -68,15 +68,15 @@ export function OpenPoolsFeed({
           <div className="flex items-start gap-3">
             <AlertCircle className="size-4 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold">Acceptance Failed</h4>
-              <p className="text-xs text-error/90 mt-0.5">{acceptError}</p>
+              <h4 className="text-sm font-bold">Acceptance Failed</h4>
+              <p className="text-sm text-error/90 mt-0.5">{acceptError}</p>
             </div>
           </div>
           {onClearAcceptError && (
             <button
               type="button"
               onClick={onClearAcceptError}
-              className="text-xs text-error hover:underline cursor-pointer shrink-0 font-medium"
+              className="text-sm text-error hover:underline cursor-pointer shrink-0 font-medium"
             >
               Dismiss
             </button>
@@ -117,7 +117,7 @@ export function OpenPoolsFeed({
             <AlertCircle className="size-5 shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-bold tracking-tight">Failed to load pools</h3>
-              <p className="text-xs text-error/90 mt-0.5">
+              <p className="text-sm text-error/90 mt-0.5">
                 {error?.message || "Could not retrieve available open pools."}
               </p>
             </div>
@@ -126,7 +126,7 @@ export function OpenPoolsFeed({
                 variant="outline"
                 size="sm"
                 onClick={onRefresh}
-                className="text-xs shrink-0 border-error/30 hover:bg-error/10 text-error gap-1.5"
+                className="text-sm shrink-0 border-error/30 hover:bg-error/10 text-error gap-1.5"
               >
                 <RefreshCw className="size-3.5" />
                 <span>Retry</span>

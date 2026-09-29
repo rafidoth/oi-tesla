@@ -15,7 +15,7 @@ export function DriverPoolHistoryEmpty({ filter }: { filter: DriverHistoryFilter
       </div>
       <div className="space-y-1">
         <p className="font-bold text-neutral-900 text-sm">{message}</p>
-        <p className="text-xs text-neutral-500 max-w-xs mx-auto">
+        <p className="text-sm text-neutral-500 max-w-xs mx-auto">
           Your completed and cancelled pool runs in Dhaka Tesla Pool will appear here.
         </p>
       </div>

@@ -85,7 +85,7 @@ function DropoffSegment({
     <div className="md:col-span-5 space-y-2">
       <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-ink-secondary">
         <span>Dropoff Destinations</span>
-        <div className="flex items-center gap-1 normal-case tracking-normal font-medium text-xs text-ink-secondary">
+        <div className="flex items-center gap-1 normal-case tracking-normal font-medium text-sm text-ink-secondary">
           <Users className="size-3.5" />
           <span>
             {passengerCount} {passengerCount === 1 ? "passenger" : "passengers"}
@@ -149,7 +149,7 @@ function DropoffStopRow({
         <span className={`size-3 rounded-full border-2 ${dotClasses} z-10`} />
       </div>
       <div className="flex items-center gap-2 min-w-0">
-        <span className="text-xs font-semibold text-ink truncate">
+        <span className="text-sm font-semibold text-ink truncate">
           {stop.locationName}
         </span>
         <span className="text-[10px] text-ink-secondary font-medium bg-surface-subtle px-1.5 py-0.5 rounded border border-border/40 shrink-0">
@@ -180,7 +180,7 @@ function ActionSegment({
           type="button"
           disabled={isActionDisabled}
           onClick={() => onDecline(poolId)}
-          className="flex-1 md:flex-none px-3 py-2 rounded-lg text-xs font-semibold text-ink-secondary hover:text-ink hover:bg-surface-subtle transition-colors disabled:opacity-50 border border-transparent hover:border-border cursor-pointer"
+          className="flex-1 md:flex-none px-3 py-2 rounded-lg text-sm font-semibold text-ink-secondary hover:text-ink hover:bg-surface-subtle transition-colors disabled:opacity-50 border border-transparent hover:border-border cursor-pointer"
         >
           Decline
         </button>
@@ -190,7 +190,7 @@ function ActionSegment({
           type="button"
           disabled={isActionDisabled}
           onClick={() => onAccept(poolId)}
-          className="flex-1 md:flex-none px-4 py-2 rounded-lg text-xs font-bold bg-black text-white hover:bg-black/90 transition-all disabled:opacity-50 shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
+          className="flex-1 md:flex-none px-4 py-2 rounded-lg text-sm font-bold bg-black text-white hover:bg-black/90 transition-all disabled:opacity-50 shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
         >
           {isAccepting && <Loader2 className="size-3.5 animate-spin" />}
           <span>{isAccepting ? "Accepting..." : "Accept"}</span>

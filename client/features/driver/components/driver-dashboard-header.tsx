@@ -69,7 +69,7 @@ export function DriverDashboardHeader({
           <AlertCircle className="size-5 shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-bold tracking-tight">Driver profile unavailable</h3>
-            <p className="text-xs text-error/90 mt-0.5">
+            <p className="text-sm text-error/90 mt-0.5">
               {error?.message || "Could not load driver or assigned vehicle information."}
             </p>
           </div>
@@ -78,7 +78,7 @@ export function DriverDashboardHeader({
               variant="outline"
               size="sm"
               onClick={onRetry}
-              className="text-xs shrink-0 border-error/30 hover:bg-error/10 text-error gap-1.5"
+              className="text-sm shrink-0 border-error/30 hover:bg-error/10 text-error gap-1.5"
             >
               <RefreshCw className="size-3.5" />
               <span>Retry</span>
@@ -97,12 +97,12 @@ export function DriverDashboardHeader({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Left: Driver and Vehicle Details */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs text-ink-secondary">
+          <div className="flex items-center gap-2 text-sm text-ink-secondary">
             <span className="font-semibold uppercase tracking-wider text-[11px] text-ink">
               DRIVER
             </span>
             <span className="text-muted">•</span>
-            <span className="inline-flex items-center gap-1.5 text-xs">
+            <span className="inline-flex items-center gap-1.5 text-sm">
               <span
                 className={`size-1.5 rounded-full ${
                   isOnline ? "bg-success" : "bg-muted"
@@ -124,7 +124,7 @@ export function DriverDashboardHeader({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 text-xs font-semibold h-7 px-2.5 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
+                    className="gap-1.5 text-sm font-semibold h-7 px-2.5 rounded-lg border-border hover:bg-surface-subtle text-ink cursor-pointer"
                   >
                     <Clock className="size-3.5 text-ink-secondary" />
                     <span>Past Pools</span>
@@ -134,7 +134,7 @@ export function DriverDashboardHeader({
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-ink-secondary pt-0.5">
+          <div className="flex items-center gap-2 text-sm text-ink-secondary pt-0.5">
             <span className="font-semibold text-ink">{vehicle.name}</span>
             <span className="text-muted">•</span>
             <span className="font-mono bg-surface-subtle text-ink px-1.5 py-0.5 rounded border border-border text-[11px] font-semibold">
@@ -146,9 +146,9 @@ export function DriverDashboardHeader({
         <div className="flex flex-wrap items-center gap-4 sm:gap-6 sm:border-l sm:border-border/60 sm:pl-6">
           {onToggleStatus && (
             <div className="flex flex-col items-start sm:items-end gap-1">
-              <span className="text-xs text-ink-secondary font-medium">Availability</span>
+              <span className="text-sm text-ink-secondary font-medium">Availability</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-ink">
+                <span className="text-sm font-semibold text-ink">
                   {hasActivePool ? "On Trip" : isOnline ? "Available" : "Off Duty"}
                 </span>
                 <ToggleOnline
@@ -163,7 +163,7 @@ export function DriverDashboardHeader({
           )}
 
           <div className="border-l border-border/40 pl-4 sm:pl-6 text-left sm:text-right">
-            <div className="text-xs text-ink-secondary font-medium">Physical Capacity</div>
+            <div className="text-sm text-ink-secondary font-medium">Physical Capacity</div>
             <div className="text-base font-bold text-ink flex items-center sm:justify-end gap-1.5 mt-0.5">
               <div className="flex gap-1" aria-label={`${vehicle.capacity} seats`}>
                 {Array.from({ length: vehicle.capacity }).map((_, i) => (

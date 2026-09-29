@@ -52,11 +52,11 @@ export function DriverPoolHistoryDrawer({
               <DrawerTitle className="text-lg font-bold text-ink">
                 Past Pools
               </DrawerTitle>
-              <DrawerDescription className="text-xs text-ink-secondary">
+              <DrawerDescription className="text-sm text-ink-secondary">
                 Dhaka Tesla Pool trip history and earnings
               </DrawerDescription>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-subtle border border-border text-ink-secondary">
+            <span className="text-sm font-semibold px-2 py-0.5 rounded-full bg-surface-subtle border border-border text-ink-secondary">
               {history.pools.length} {history.pools.length === 1 ? "pool" : "pools"}
             </span>
           </div>
@@ -91,7 +91,7 @@ function DrawerFilterBar({
   ];
 
   return (
-    <div className="p-3 bg-surface-subtle mx-4 my-2.5 rounded-xl flex gap-1 text-xs font-bold text-center shrink-0">
+    <div className="p-3 bg-surface-subtle mx-4 my-2.5 rounded-xl flex gap-1 text-sm font-bold text-center shrink-0">
       {filters.map((tab) => (
         <button
           key={tab.value}
