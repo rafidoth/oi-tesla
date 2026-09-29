@@ -63,7 +63,7 @@ One trusted first-party client with a fixed set of screens; resource-oriented en
 | `POST /api/driver/pools/:id/decline` | Records a decline (hidden from this driver, still visible to others) |
 | `POST /api/driver/pools/:id/arrive` / `start` / `complete` | Lifecycle (FR-D07); `start` freezes fares; `complete` creates payments |
 | `GET /api/driver/pools/:id` | Pool + full roster with per-passenger fares, seats, statuses (FR-D06) |
-| `GET /api/driver/pools?status=…` | Own pool history |
+| `GET /api/driver/pools?status=ALL \| COMPLETED \| CANCELLED` | Own pool history (newest first; returns destination stops, occupied seats, and aggregated total earnings in `totalEarningsPaisa`; defaults to terminal pools for `ALL`) |
 | `POST /api/driver/rides/:id/cash-received` | CASH settlement: `PENDING → PAID`, `marked_by` = driver |
 
 **Ops**
