@@ -1,11 +1,18 @@
 # OiTesla
 
-Shared ride-pooling platform for electric three-wheelers in Dhaka.
+Shared ride-pooling platform for electric auto-rickshaws in Dhaka.
 
-## Table of Contents
+## What I Built
+
+The core challenge was getting the domain model right — pooling, fares, capacity, and payments all interact, and any one of them done wrong breaks the rest.
+
+The pooling engine groups compatible ride requests eagerly, before a driver accepts, so passengers see a shared fare from the start. Capacity is enforced with a single guarded atomic `UPDATE` and a database `CHECK` constraint — two concurrent requests racing for the final seat cannot both win, at the database level, not the application level. Fares are split by each passenger's leg distance and recalculated every time a passenger joins or cancels, then frozen permanently the moment the trip starts. The entire pool — not individual rides — moves through a strict state machine (`OPEN → MATCHED → DRIVER_ARRIVED → STARTED → COMPLETED`), with every transition recorded in an append-only audit log. Payments are settlement bookkeeping only; they never gate vehicle progression.
+
+
+
 
 - [Problem Statement](#problem-statement)
-- [Tech Stack](#tech-stack)
+- [Architecture & Deployment](#architecture--deployment)
 - [Feature List](#feature-list)
   - [1. Account and Profile Management](#1-account-and-profile-management)
   - [2. Ride Booking and Upfront Fare Estimates](#2-ride-booking-and-upfront-fare-estimates)
@@ -19,12 +26,19 @@ Shared ride-pooling platform for electric three-wheelers in Dhaka.
   - [10. Payment Settlement](#10-payment-settlement)
   - [11. Ride History and Audit Log](#11-ride-history-and-audit-log)
   - [12. Privacy and Data Separation](#12-privacy-and-data-separation)
+- [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Local Setup](#local-setup)
+- [Seed Data & Demo Accounts](#seed-data--demo-accounts)
 - [Database Schema](#database-schema)
 - [API Overview](#api-overview)
 - [Documentation Index](#documentation-index)
+- [Key Decisions & Trade-Offs](#key-decisions--trade-offs)
+- [Known Limitations](#known-limitations)
+- [Next Improvements](#next-improvements)
+- [AI Usage](#ai-usage)
 
 ---
 
@@ -36,27 +50,22 @@ This creates three concrete problems: passengers pay unnecessarily high fares fo
 
 ---
 
-## Tech Stack
 
-| Layer | Technology | Version |
-|---|---|---|
-| Frontend | Next.js (App Router) + React + TypeScript | Next 16, React 19 |
-| Styling | Tailwind CSS v4 + shadcn/ui | Tailwind 4, shadcn 4 |
-| State Management | Zustand + TanStack React Query | Zustand 5, RQ 5 |
-| HTTP Client | Axios | 1.20 |
-| Backend | Node.js + Express + TypeScript | Node 20+, Express 4 |
-| Database | PostgreSQL | 18 (Alpine) |
-| ORM | Drizzle ORM + Drizzle Kit | 0.45 |
-| Auth | JWT (HS256) via `jose` | 6.x |
-| Validation | Zod | 3.24 |
-| Logging | pino + pino-http | 9.x / 10.x |
-| Testing | Vitest | 5.x |
-| Containerization | Docker Compose | multi-stage build |
-| Money | Integer paisa (`BIGINT`) | — |
 
-> See [`docs/Tech-stack.md`](docs/Tech-stack.md) for detailed justifications behind each choice.
+## Architecture & Deployment
+
+![System Architecture](assets/architecture.png)
+
+The application runs as two independent deployments: the frontend on Vercel and the backend on AWS.
+
+The client is a Next.js app served by Vercel. The browser fetches the UI directly from Vercel's edge network. When the user performs any action that needs data — requesting a ride, checking status, paying a fare — the client sends an API request to the backend.
+
+The backend runs on a single EC2 instance. Three Docker containers run inside it: the Node.js API server, a PostgreSQL database, and Nginx. The database container has no public exposure; it communicates with the API server over Docker's internal network only. An Elastic IP is attached to the EC2 instance so the backend has a stable public address that survives restarts.
+
+Nginx is the only entry point from the internet. It terminates HTTPS on port 443 and proxies requests to the API server. The API server reads from and writes to the database, then the response travels back through Nginx to Vercel and on to the browser.
 
 ---
+
 
 
 ## Feature List
@@ -119,6 +128,8 @@ Vehicle capacity operates under strict concurrency controls to guarantee seats a
 
 ### 6. Trip Lifecycle and Real-Time Tracking
 
+![Trip Lifecycle and Real-Time Tracking](assets/feature-lifecycle.mp4)
+
 Every shared trip progresses through five consecutive stages:
 
 ```text
@@ -136,16 +147,67 @@ REQUESTED / OPEN ──► MATCHED ──► DRIVER_ARRIVED ──► STARTED �
 
 ### 7. Distance-Proportional Fare Calculation
 
-Individual fares decrease as more passengers join, with riders traveling farther paying a proportional share:
+Each passenger pays their share of the total vehicle trip cost, calculated in proportion to the distance they personally travel. Fares drop as more passengers join — the same vehicle cost divided among more people.
 
-* **Total Trip Cost:** Trip cost is determined by the vehicle's longest passenger leg:
-  `Trip Total = Base Fare (30 BDT) + (Distance Rate (20 BDT/km) × Farthest Destination Distance)`
-* **Proportional Distance Splitting:** The shared trip cost is divided among passengers based on their personal travel distances:
-  `Passenger Share = Trip Total × (Passenger Distance / Sum of All Passenger Distances)`
-  Passengers who travel farther pay more, while passengers disembarking earlier pay less.
-* **Dynamic Sharing Discounts:** When a new passenger joins an open pool, the system recalculates and lowers every active member's fare.
-* **Exact Integer Rounding:** Fares are calculated in integer paisa (100 paisa = 1 BDT). Fractional paisa are distributed using the largest-remainder method, ensuring the sum of all individual fares equals the vehicle's total fare down to the exact paisa.
-* **Permanent Fare Lock:** All passenger fares lock the moment the driver marks the trip as `STARTED`. Subsequent cancellations or changes cannot alter the amount due.
+**Total Trip Cost**
+
+The vehicle's fare is a fixed base charge plus a variable distance cost based on the farthest stop the vehicle must reach:
+
+```
+Total Fare = Base Fare + (Per-Km Rate × Farthest Destination Distance)
+```
+
+Configuration defaults: Base Fare = 50 BDT, Per-Km Rate = 20 BDT/km (both tunable without code changes).
+
+**Passenger Share**
+
+Each passenger pays a fraction of the total fare equal to their leg distance divided by the sum of all passenger leg distances:
+
+```
+Passenger Share = Total Fare × (Passenger's Distance ÷ Sum of All Passenger Distances)
+```
+
+**Worked Example**
+
+Three passengers share a vehicle from a common pickup. Rafi travels 2 km, Nusrat travels 4 km, and Shirin travels 4 km. Sum of all legs = 10 km.
+
+| Passenger | Distance | Share Calculation | Fare |
+|---|---|---|---|
+| Rafi | 2 km | Total Fare × (2 ÷ 10) | 20% |
+| Nusrat | 4 km | Total Fare × (4 ÷ 10) | 40% |
+| Shirin | 4 km | Total Fare × (4 ÷ 10) | 40% |
+
+Every passenger pays less than they would riding alone. The sum of all shares always equals the total vehicle fare, down to the exact paisa.
+
+**Rounding**
+
+Fares are stored and calculated in integer **paisa** (100 paisa = 1 BDT) — never as decimals or floats. Fractional remainders are distributed using the largest-remainder method, so shares always sum exactly to the total.
+
+**Fare Lock**
+
+All fares freeze when the driver starts the trip (`STARTED`). No subsequent cancellation or passenger change can alter the locked amount.
+
+---
+
+**A Note on the Model's Trade-off**
+
+This proportional model works well in practice, but it has a known structural trade-off in overlapping routes. Consider the scenario below — Rafi boards at A (destination B, 2 km), Nusrat boards at A (destination C, 4 km), and Shirin boards at B (destination D, 4 km from B):
+
+![Proportional fare model — overlapping routes](assets/fare-proportional-model.png)
+
+Under the proportional model the sum of legs is 10 km, so Rafi pays 2/10, Nusrat 4/10, Shirin 4/10. The problem: Rafi and Nusrat's denominator includes Shirin's 4 km leg, which they never physically travel. They indirectly subsidise a segment they never use.
+
+The alternative — a **segment-based model** — prices each route segment independently and splits its cost only among passengers physically present on that segment:
+
+![Segment-based fare model](assets/fare-segment-model.png)
+
+```
+Segment A→B (2 km): shared by Rafi + Nusrat   → each pays half the segment cost
+Segment B→C (2 km): shared by all three        → each pays one-third
+Segment C→D (2 km): Shirin alone               → pays the full segment cost
+```
+
+Under this model each passenger pays only for the distance they physically occupy the vehicle. It is strictly fairer for overlapping routes, but it requires per-segment fare computation and is reserved as a future enhancement (see [Next Improvements](#next-improvements)).
 
 ### 8. Driver Console and Trip Operations
 
@@ -176,6 +238,7 @@ The application supports post-trip settlement through two payment options:
 * **TeslaPay (Digital Settlement):** Passengers who select TeslaPay tap a "Pay Now" button on their ride screen. The application records the transaction as `PAID` with the passenger's user ID and timestamp.
 * **Cash Settlement:** Passengers who choose cash pay the driver directly upon arrival. The driver confirms payment via a "Mark Cash Received" button on their console, which marks the record as `PAID`.
 * **Settlement Separation:** Payments serve as settlement accounting; unpaid balances do not halt vehicle progression or block pool completion.
+* **Intermediate Drop-Off Edge Case (Unhandled in MVP):** In multi-stop pooled rides, passengers with intermediate drop-off locations physically alight mid-trip before the vehicle reaches the final stop. Currently, payment settlement is initiated at the pool level only when the entire trip reaches `COMPLETED` at the terminal destination. Intermediate drop-offs and per-passenger mid-trip settlement are unhandled in the MVP.
 
 ### 11. Ride History and Audit Log
 
@@ -199,6 +262,28 @@ The application enforces data boundaries between passengers and drivers:
 * **Passenger Fare Privacy:** A passenger can view only their own fare, route details, and payment state. The platform never exposes what other riders in the vehicle paid.
 * **Restricted Manifest Access:** Passenger names and seat allocations are visible only to the driver assigned to that specific pool.
 * **Server-Side Authorization:** Every database read and write verifies the caller's identity and user role against session credentials. Request parameters cannot be manipulated to access or alter another user's ride.
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Frontend | Next.js (App Router) + React + TypeScript | Next 16, React 19 |
+| Styling | Tailwind CSS v4 + shadcn/ui | Tailwind 4, shadcn 4 |
+| State Management | Zustand + TanStack React Query | Zustand 5, RQ 5 |
+| HTTP Client | Axios | 1.20 |
+| Backend | Node.js + Express + TypeScript | Node 20+, Express 4 |
+| Database | PostgreSQL | 18 (Alpine) |
+| ORM | Drizzle ORM + Drizzle Kit | 0.45 |
+| Auth | JWT (HS256) via `jose` | 6.x |
+| Validation | Zod | 3.24 |
+| Logging | pino + pino-http | 9.x / 10.x |
+| Testing | Vitest | 5.x |
+| Containerization | Docker Compose | multi-stage build |
+| Money | Integer paisa (`BIGINT`) | — |
+
+> See [`docs/Tech-stack.md`](docs/Tech-stack.md) for detailed justifications behind each choice.
 
 ---
 
@@ -262,60 +347,150 @@ OiTesla/
 
 ---
 
-## Getting Started
+## Environment Variables
 
-**1. Clone and install dependencies**
+Both the backend server and frontend client require environment files before starting.
 
-```bash
-git clone https://github.com/rafidoth/oi-tesla.git
-cd oi-tesla
+### Backend (`server/.env`)
 
-cd server && npm install
-cd ../client && npm install
-```
-
-**2. Configure environment variables**
+Copy `server/.env.example` to `server/.env`:
 
 ```bash
 cp server/.env.example server/.env
 ```
 
-Fill in the values:
+Configuration variables:
 
 ```env
-POSTGRES_USER=oitesla
-POSTGRES_PASSWORD=<your-password>
+# Database Credentials
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
 POSTGRES_DB=oitesla
+
+# Server Configuration
 NODE_ENV=development
 PORT=8080
-JWT_SECRET=<generate-a-secret>
-DATABASE_URL=postgres://oitesla:<your-password>@localhost:5432/oitesla
+JWT_SECRET=your-secure-jwt-secret-at-least-32-chars
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/oitesla
 ```
 
-**3. Start with Docker (recommended)**
+| Variable | Description |
+|---|---|
+| `POSTGRES_USER` | PostgreSQL superuser username |
+| `POSTGRES_PASSWORD` | PostgreSQL user password |
+| `POSTGRES_DB` | Application database name |
+| `NODE_ENV` | Runtime environment (`development` or `production`) |
+| `PORT` | HTTP port for the Express API server (default: `8080`) |
+| `JWT_SECRET` | Secret key used to sign and verify HS256 JWT tokens |
+| `DATABASE_URL` | PostgreSQL connection URI used by Drizzle ORM |
+
+### Frontend (`client/.env`)
+
+Copy `client/.env.example` to `client/.env`:
+
+```bash
+cp client/.env.example client/.env
+```
+
+Configuration variable:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080/api
+```
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Base API endpoint accessed by the browser application |
+
+---
+
+## Local Setup
+
+### 1. Server and Database (Docker Compose)
+
+Docker Compose starts PostgreSQL 18, executes database migrations, seeds reference data and demo accounts, and boots the Express API.
+
+**Prerequisites:** Docker, Docker Compose, and GNU Make (you can skip it, in that case run docker compose commands from Makefile).
+
+From the `server/` directory:
 
 ```bash
 cd server
-make up          # db → migrate + seed → api on :8080
+
+# Verify your environment file exists
+cp .env.example .env
+
+# Build and start services in the background
+make up
 ```
 
-**4. Start the client**
+`make up` runs three services sequentially:
+1. `oitesla-db`: PostgreSQL 18 with persistent volume storage on port `5432`.
+2. `oitesla-migrate`: Applies Drizzle migrations and runs the database seed script.
+3. `oitesla-api`: Express API server listening on `http://localhost:8080`.
+
+**Management Commands:**
+
+```bash
+make logs     # Tail API and database container logs
+make down     # Stop and remove active containers
+make restart  # Rebuild and restart all services
+```
+
+### 2. Frontend Client (Next.js)
+
+From the `client/` directory:
 
 ```bash
 cd client
-npm run dev      # http://localhost:3000
+
+# Verify your environment file exists
+cp .env.example .env
+
+# Install project dependencies
+npm install
+
+# Start the Next.js development server
+npm run dev
 ```
 
-**5. Run tests**
+For production builds:
 
 ```bash
-cd server
-npm test         # vitest
+npm run build
+npm run start
 ```
+
+Access the frontend application at [http://localhost:3000](http://localhost:3000).
+
+---
+
+## Seed Data & Demo Accounts
+
+The database seed (`server/src/db/seed.ts`) executes automatically during `make up`. You can also trigger it manually from `server/` with `npm run db:seed`.
+
+The seed populates:
+* **8 Dhaka Locations:** Banani, Gulshan, Mohakhali, Uttara, Bashundhara, Mirpur, Farmgate, and Dhanmondi with representative GPS coordinates.
+* **5 Supported Routes:** Predefined transit routes with validated, consistent segment distances.
+* **Demo Vehicle:** Vehicle "Bullet" (license: `DHK-TESLA-001`, capacity: 3 seats, status: `ONLINE`) assigned to driver Jashim Uddin.
+* **5 Demo User Accounts:** Seeded with scrypt-hashed passwords for end-to-end testing of pooling workflows.
+
+### Example Credentials
+
+All demo accounts share the password: `Password123!`
+
+| Name | Role | Email 
+|---|---|---|
+| **Jashim Uddin** | Driver | `jashim@example.com` 
+| **Nusrat Jahan** | Passenger | `nusrat@example.com` 
+| **Rafiqul Islam** | Passenger | `rafiq@example.com` 
+| **Shirin Akter** | Passenger | `shirin@example.com` 
+| **Tanjim Ahmed** | Passenger | `tanjim@example.com`
 
 ---
 
 ## Database Schema
+
 
 ```mermaid
 erDiagram
@@ -506,8 +681,52 @@ All endpoints are prefixed with `/api`. Authenticated routes require `Authorizat
 
 - [`docs/PRD.md`](docs/PRD.md) — Product requirements, user personas, and core business rules
 - [`docs/Architecture.md`](docs/Architecture.md) — System architecture, lifecycle state machines, and concurrency controls
-- [`docs/ADR.md`](docs/ADR.md) — Architectural decision records (D1–D15)
+- [`docs/ADR.md`](docs/ADR.md) — Architectural decision records (D1–D17)
 - [`docs/Data.md`](docs/Data.md) — Database schema, entity relationships, and constraints
 - [`docs/API.md`](docs/API.md) — REST API specifications and status codes
 - [`docs/Tech-stack.md`](docs/Tech-stack.md) — Technology stack justifications
 - [`docs/UI_DESIGN.md`](docs/UI_DESIGN.md) — Design tokens, color palette, and layout guidelines
+
+---
+
+## Key Decisions & Trade-Offs
+
+* **Eager Pooling (ADR D1, D2):** The system groups compatible ride requests immediately upon creation into an `OPEN` pool. Drivers accept pre-formed pools rather than individual requests. This gives passengers early visibility into group fares, but leaves pools unassigned until an online driver accepts.
+* **Guarded Atomic Counters (ADR D5):** Vehicle capacity is enforced using a conditional `UPDATE` on `pools.occupied_seats` with a database `CHECK` constraint. This eliminates transaction deadlocks without row locks, but rejects concurrent requests exceeding capacity with a `409 Conflict`.
+* **Distance-Proportional Fare Split (ADR D7):** The vehicle-trip cost derives from the farthest destination (`base + perKm × maxLeg`) and splits across passengers relative to their leg distance. Fares drop as passengers join, then lock permanently when the trip enters `STARTED`.
+* **Short Polling over WebSockets (ADR D14):** Active screens refresh every 5 seconds using React Query. This avoids persistent connection overhead on spin-down hosting environments (Render and Vercel), but introduces up to 5 seconds of latency for lifecycle updates.
+* **Pool-Level Lifecycle (ADR D9, D15, D17):** The entire pool transitions together through `OPEN → MATCHED → DRIVER_ARRIVED → STARTED → COMPLETED`. This keeps the state machine deterministic and minimal, but delays individual payment generation until the vehicle reaches its final stop.
+
+---
+
+## Known Limitations
+
+* **Deferred Intermediate Settlement:** Passengers alighting at intermediate stops along a route cannot settle fares upon exit. The system generates payment records only after the driver completes the final pool destination.
+* **Shared Pickup Only:** All co-passengers must depart from the same initial pickup location. Intermediate boarding along an active route is unsupported.
+* **Static Route Coverage:** The matching engine supports only predefined routes with seeded segment distances. Requests between unmapped location pairs are rejected.
+* **Simulated Payments:** TeslaPay records settlements directly to the database without third-party payment gateways or card processors.
+* **Manual Lifecycle Progression:** Drivers progress trips through console buttons; the system does not track live vehicle GPS or turn-by-turn navigation.
+
+---
+
+## Next Improvements
+
+* **Per-Passenger Drop-Off:** Add intermediate drop-off actions to the driver console so passengers can settle fares immediately upon leaving the vehicle.
+* **Intermediate Pickups:** Allow passengers to board an in-progress pool at intermediate route stops when spare seats exist.
+* **Push Notifications (SSE/WebSockets):** Replace polling on active ride screens with real-time server-sent events.
+* **Payment Gateway Integration:** Connect mobile financial services (bKash, Nagad) to replace simulated TeslaPay transactions.
+* **Automated Route Ingestion:** Generate routes and compute distances automatically via OpenStreetMap rather than static database seeds.
+
+---
+
+## AI Usage
+
+**Tools used:** Antigravity and Opencode (agentic coding assistants), ChatGPT and Claude (browser-based chat for design discussions).
+
+**One idea accepted from AI**
+
+The AI suggested the current proportional fare model: split the total vehicle cost among passengers by their leg distances. It's the obvious way to start with distance-based sharing, and it works fine when everyone is going to the same place. I accepted it and built it. I have a different idea, segment-based pricing, where the cost of each route segment is split only among the passengers actually riding that segment. It's documented in Section 7 and queued in Next Improvements.
+
+**One idea I changed**
+
+The AI made the driver's available pool list accept-only, with no way to decline. Its reasoning was that drivers can just take what they want and ignore the rest, which keeps things simple. But the list fills up with pools a driver will never take, and since there's no way to say so, the same ones come back on every refresh. So I added explicit declining. Once a driver declines a pool, it never shows up in their feed again. The pool itself isn't cancelled and other drivers still see it.
