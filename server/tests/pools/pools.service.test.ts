@@ -489,9 +489,9 @@ describe('PoolsService Unit Tests', () => {
 
       expect(mockPoolsRepo.findActiveMembersWithLegLocations).toHaveBeenCalledWith('pool-1', mockTx);
       expect(mockLocationsService.getDistance).toHaveBeenCalledWith(2, 4);
-      expect(shares.get('ride-nusrat')).toBe(15000);
+      expect(shares.get('ride-nusrat')).toBe(7000);
       expect(mockPoolsRepo.updateMemberFares).toHaveBeenCalledWith(
-        [{ passengerRideId: 'ride-nusrat', farePaisa: 15000 }],
+        [{ passengerRideId: 'ride-nusrat', farePaisa: 7000 }],
         mockTx
       );
       expect(mockEventsService.logRideEvent).toHaveBeenCalledWith(
@@ -500,8 +500,8 @@ describe('PoolsService Unit Tests', () => {
           actorType: 'SYSTEM',
           poolId: 'pool-1',
           payload: {
-            poolTotal: 15000,
-            memberFares: { 'ride-nusrat': 15000 },
+            poolTotal: 7000,
+            memberFares: { 'ride-nusrat': 7000 },
           },
         },
         mockTx
@@ -556,18 +556,18 @@ describe('PoolsService Unit Tests', () => {
         mockEventsService as unknown as EventsService
       );
       const stage1Shares = await poolsService.recalculatePoolFares('pool-rush-hour');
-      expect(stage1Shares.get('ride-nusrat')).toBe(15000);
+      expect(stage1Shares.get('ride-nusrat')).toBe(7000);
 
       // --- Stage 2: Rafiq joins ---
       mockPoolsRepo.findActiveMembersWithLegLocations = vi.fn().mockResolvedValue([member1, member2]);
       const stage2Shares = await poolsService.recalculatePoolFares('pool-rush-hour');
-      expect(stage2Shares.get('ride-nusrat')).toBe(10714);
-      expect(stage2Shares.get('ride-rafiq')).toBe(4286);
-      expect(stage2Shares.get('ride-nusrat')! + stage2Shares.get('ride-rafiq')!).toBe(15000);
+      expect(stage2Shares.get('ride-nusrat')).toBe(5000);
+      expect(stage2Shares.get('ride-rafiq')).toBe(2000);
+      expect(stage2Shares.get('ride-nusrat')! + stage2Shares.get('ride-rafiq')!).toBe(7000);
       expect(mockPoolsRepo.updateMemberFares).toHaveBeenCalledWith(
         [
-          { passengerRideId: 'ride-nusrat', farePaisa: 10714 },
-          { passengerRideId: 'ride-rafiq', farePaisa: 4286 },
+          { passengerRideId: 'ride-nusrat', farePaisa: 5000 },
+          { passengerRideId: 'ride-rafiq', farePaisa: 2000 },
         ],
         undefined
       );
@@ -575,14 +575,14 @@ describe('PoolsService Unit Tests', () => {
       // --- Stage 3: Shirin joins ---
       mockPoolsRepo.findActiveMembersWithLegLocations = vi.fn().mockResolvedValue([member1, member2, member3]);
       const stage3Shares = await poolsService.recalculatePoolFares('pool-rush-hour');
-      expect(stage3Shares.get('ride-nusrat')).toBe(8334);
-      expect(stage3Shares.get('ride-rafiq')).toBe(3333);
-      expect(stage3Shares.get('ride-shirin')).toBe(3333);
+      expect(stage3Shares.get('ride-nusrat')).toBe(3889);
+      expect(stage3Shares.get('ride-rafiq')).toBe(1556);
+      expect(stage3Shares.get('ride-shirin')).toBe(1555);
       expect(
         stage3Shares.get('ride-nusrat')! +
         stage3Shares.get('ride-rafiq')! +
         stage3Shares.get('ride-shirin')!
-      ).toBe(15000);
+      ).toBe(7000);
     });
   });
 

@@ -35,7 +35,7 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
         seats: 1,
       });
       expect(bToMEstimate.distanceM).toBe(5000);
-      expect(bToMEstimate.soloFarePaisa).toBe(15000);
+      expect(bToMEstimate.soloFarePaisa).toBe(7000);
 
       const bToGEstimate = await env.ridesService.calculateEstimate({
         pickupLocationId: CORRIDOR_C1.locations.BANANI.id,
@@ -43,7 +43,7 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
         seats: 1,
       });
       expect(bToGEstimate.distanceM).toBe(2000);
-      expect(bToGEstimate.soloFarePaisa).toBe(9000);
+      expect(bToGEstimate.soloFarePaisa).toBe(4000);
     });
   });
 
@@ -80,10 +80,10 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(nusratActiveRide).not.toBeNull();
       expect(nusratActiveRide!.status).toBe('REQUESTED');
 
-      // Assert: Nusrat's fare is 15000 paisa (150 BDT solo estimate)
-      expect(nusratBooking.estimateFarePaisa).toBe(15000);
-      expect(nusratActiveRide!.farePaisa).toBe(15000);
-      expect(nusratActiveRide!.originalEstimateFarePaisa).toBe(15000);
+      // Assert: Nusrat's fare is 7000 paisa (70 BDT solo estimate)
+      expect(nusratBooking.estimateFarePaisa).toBe(7000);
+      expect(nusratActiveRide!.farePaisa).toBe(7000);
+      expect(nusratActiveRide!.originalEstimateFarePaisa).toBe(7000);
 
       // Assert: Audit events REQUEST_CREATED and POOL_CREATED logged
       const reqEvents = env.store.findEventsByType('REQUEST_CREATED');
@@ -94,7 +94,7 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
         seats: 1,
         pickupLocationId: 2,
         destLocationId: 4,
-        estimateFarePaisa: 15000,
+        estimateFarePaisa: 7000,
       });
 
       const poolEvents = env.store.findEventsByType('POOL_CREATED');
@@ -134,15 +134,15 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(poolA!.occupiedSeats).toBe(2);
       expect(poolA!.capacity).toBe(3);
 
-      // Assert: Fares recompute proportionally with exact balance sum(shares) === 15000
-      // Nusrat (5000m leg): 15000 * 5000 / 7000 = 10714 paisa
-      // Rafiq (2000m leg): 15000 * 2000 / 7000 = 4286 paisa
+      // Assert: Fares recompute proportionally with exact balance sum(shares) === 7000
+      // Nusrat (5000m leg): 7000 * 5000 / 7000 = 5000 paisa
+      // Rafiq (2000m leg): 7000 * 2000 / 7000 = 2000 paisa
       const nusratActiveRide = await env.ridesService.getActiveRide(CAST.passengers.nusrat.id);
       const rafiqActiveRide = await env.ridesService.getActiveRide(CAST.passengers.rafiq.id);
 
-      expect(nusratActiveRide!.farePaisa).toBe(10714);
-      expect(rafiqActiveRide!.farePaisa).toBe(4286);
-      expect(nusratActiveRide!.farePaisa! + rafiqActiveRide!.farePaisa!).toBe(15000);
+      expect(nusratActiveRide!.farePaisa).toBe(5000);
+      expect(rafiqActiveRide!.farePaisa).toBe(2000);
+      expect(nusratActiveRide!.farePaisa! + rafiqActiveRide!.farePaisa!).toBe(7000);
 
       // Assert: Co-passengers visible to each other (D16)
       expect(nusratActiveRide!.pool.coPassengers).toEqual([
@@ -174,10 +174,10 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(recalcEvents.length).toBeGreaterThanOrEqual(1);
       const latestRecalc = recalcEvents[recalcEvents.length - 1];
       expect(latestRecalc.payload).toMatchObject({
-        poolTotal: 15000,
+        poolTotal: 7000,
         memberFares: {
-          [nusratBooking.rideId]: 10714,
-          [rafiqBooking.rideId]: 4286,
+          [nusratBooking.rideId]: 5000,
+          [rafiqBooking.rideId]: 2000,
         },
       });
     });
@@ -218,22 +218,22 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
 
       // Assert: Fares recompute proportionally with largest-remainder tie-breaking
       // Total leg distance = 5000 + 2000 + 2000 = 9000m
-      // Nusrat raw: 15000 * 5000 / 9000 = 8333.333 -> floor 8333, rem 3000
-      // Rafiq raw: 15000 * 2000 / 9000 = 3333.333 -> floor 3333, rem 3000
-      // Shirin raw: 15000 * 2000 / 9000 = 3333.333 -> floor 3333, rem 3000
-      // All remainders tied at 3000. Nusrat has earliest createdAt -> gets +1 tie-breaker
+      // Nusrat raw: 7000 * 5000 / 9000 = 3888.888 -> floor 3888, rem 8000
+      // Rafiq raw: 7000 * 2000 / 9000 = 1555.555 -> floor 1555, rem 5000
+      // Shirin raw: 7000 * 2000 / 9000 = 1555.555 -> floor 1555, rem 5000
+      // Nusrat gets +1 (rem 8000), Rafiq gets +1 (earlier createdAt tie-breaker)
       const nusratActiveRide = await env.ridesService.getActiveRide(CAST.passengers.nusrat.id);
       const rafiqActiveRide = await env.ridesService.getActiveRide(CAST.passengers.rafiq.id);
       const shirinActiveRide = await env.ridesService.getActiveRide(CAST.passengers.shirin.id);
 
-      expect(nusratActiveRide!.farePaisa).toBe(8334);
-      expect(rafiqActiveRide!.farePaisa).toBe(3333);
-      expect(shirinActiveRide!.farePaisa).toBe(3333);
+      expect(nusratActiveRide!.farePaisa).toBe(3889);
+      expect(rafiqActiveRide!.farePaisa).toBe(1556);
+      expect(shirinActiveRide!.farePaisa).toBe(1555);
       expect(
         nusratActiveRide!.farePaisa! +
           rafiqActiveRide!.farePaisa! +
           shirinActiveRide!.farePaisa!
-      ).toBe(15000);
+      ).toBe(7000);
 
       // Assert: Audit events logged
       const shirinReqEvents = env.store.getEvents({
@@ -255,11 +255,11 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       });
       const latestRecalc = recalcEvents[recalcEvents.length - 1];
       expect(latestRecalc.payload).toMatchObject({
-        poolTotal: 15000,
+        poolTotal: 7000,
         memberFares: {
-          [nusratBooking.rideId]: 8334,
-          [rafiqBooking.rideId]: 3333,
-          [shirinBooking.rideId]: 3333,
+          [nusratBooking.rideId]: 3889,
+          [rafiqBooking.rideId]: 1556,
+          [shirinBooking.rideId]: 1555,
         },
       });
     });
@@ -307,9 +307,9 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       const nusratActive = await env.ridesService.getActiveRide(CAST.passengers.nusrat.id);
       const rafiqActive = await env.ridesService.getActiveRide(CAST.passengers.rafiq.id);
       const shirinActive = await env.ridesService.getActiveRide(CAST.passengers.shirin.id);
-      expect(nusratActive!.farePaisa).toBe(8334);
-      expect(rafiqActive!.farePaisa).toBe(3333);
-      expect(shirinActive!.farePaisa).toBe(3333);
+      expect(nusratActive!.farePaisa).toBe(3889);
+      expect(rafiqActive!.farePaisa).toBe(1556);
+      expect(shirinActive!.farePaisa).toBe(1555);
 
       // Assert: A new Pool B is created with status 'OPEN', occupied_seats = 1/3
       expect(tanjimBooking.isNewPool).toBe(true);
@@ -319,11 +319,11 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(poolB!.occupiedSeats).toBe(1);
       expect(poolB!.capacity).toBe(3);
 
-      // Assert: Tanjim is assigned to Pool B with solo fare 15000 paisa
+      // Assert: Tanjim is assigned to Pool B with solo fare 7000 paisa
       const tanjimActive = await env.ridesService.getActiveRide(CAST.passengers.tanjim.id);
       expect(tanjimActive).not.toBeNull();
       expect(tanjimActive!.pool.id).toBe(poolB!.id);
-      expect(tanjimActive!.farePaisa).toBe(15000);
+      expect(tanjimActive!.farePaisa).toBe(7000);
       expect(tanjimActive!.status).toBe('REQUESTED');
     });
 
@@ -385,15 +385,15 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(cancelResponse.poolStatus).toBe('OPEN');
 
       // Assert: Fares for remaining members in Pool A automatically recompute:
-      // Nusrat fare adjusts from 8334 to 10714 paisa
-      // Rafiq fare adjusts from 3333 to 4286 paisa
-      // Sum = 10714 + 4286 = 15000 paisa
+      // Nusrat fare adjusts from 3889 to 5000 paisa
+      // Rafiq fare adjusts from 1556 to 2000 paisa
+      // Sum = 5000 + 2000 = 7000 paisa
       const nusratActiveRide = await env.ridesService.getActiveRide(CAST.passengers.nusrat.id);
       const rafiqActiveRide = await env.ridesService.getActiveRide(CAST.passengers.rafiq.id);
 
-      expect(nusratActiveRide!.farePaisa).toBe(10714);
-      expect(rafiqActiveRide!.farePaisa).toBe(4286);
-      expect(nusratActiveRide!.farePaisa! + rafiqActiveRide!.farePaisa!).toBe(15000);
+      expect(nusratActiveRide!.farePaisa).toBe(5000);
+      expect(rafiqActiveRide!.farePaisa).toBe(2000);
+      expect(nusratActiveRide!.farePaisa! + rafiqActiveRide!.farePaisa!).toBe(7000);
 
       // Assert: Audit events RIDE_CANCELLED and FARE_RECALCULATED logged
       const cancelEvents = env.store.getEvents({
@@ -414,10 +414,10 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       });
       const latestRecalc = recalcEvents[recalcEvents.length - 1];
       expect(latestRecalc.payload).toMatchObject({
-        poolTotal: 15000,
+        poolTotal: 7000,
         memberFares: {
-          [nusratBooking.rideId]: 10714,
-          [rafiqBooking.rideId]: 4286,
+          [nusratBooking.rideId]: 5000,
+          [rafiqBooking.rideId]: 2000,
         },
       });
     });
@@ -439,7 +439,7 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
 
       let nusratActive = (await env.ridesService.getActiveRide(CAST.passengers.nusrat.id))!;
       expect(nusratActive.status).toBe('REQUESTED');
-      expect(nusratActive.farePaisa).toBe(15000);
+      expect(nusratActive.farePaisa).toBe(7000);
 
       // --- Step 2: Rafiq joins B->G ---
       const rafiq = await env.ridesService.requestRide(CAST.passengers.rafiq.id, {
@@ -456,9 +456,9 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
 
       nusratActive = (await env.ridesService.getActiveRide(CAST.passengers.nusrat.id))!;
       let rafiqActive = (await env.ridesService.getActiveRide(CAST.passengers.rafiq.id))!;
-      expect(nusratActive.farePaisa).toBe(10714);
-      expect(rafiqActive.farePaisa).toBe(4286);
-      expect(nusratActive.farePaisa! + rafiqActive.farePaisa!).toBe(15000);
+      expect(nusratActive.farePaisa).toBe(5000);
+      expect(rafiqActive.farePaisa).toBe(2000);
+      expect(nusratActive.farePaisa! + rafiqActive.farePaisa!).toBe(7000);
 
       // --- Step 3: Shirin joins B->G ---
       const shirin = await env.ridesService.requestRide(CAST.passengers.shirin.id, {
@@ -476,12 +476,12 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       nusratActive = (await env.ridesService.getActiveRide(CAST.passengers.nusrat.id))!;
       rafiqActive = (await env.ridesService.getActiveRide(CAST.passengers.rafiq.id))!;
       let shirinActive = (await env.ridesService.getActiveRide(CAST.passengers.shirin.id))!;
-      expect(nusratActive.farePaisa).toBe(8334);
-      expect(rafiqActive.farePaisa).toBe(3333);
-      expect(shirinActive.farePaisa).toBe(3333);
+      expect(nusratActive.farePaisa).toBe(3889);
+      expect(rafiqActive.farePaisa).toBe(1556);
+      expect(shirinActive.farePaisa).toBe(1555);
       expect(
         nusratActive.farePaisa! + rafiqActive.farePaisa! + shirinActive.farePaisa!
-      ).toBe(15000);
+      ).toBe(7000);
 
       // --- Step 4: Tanjim requests B->M (Pool A full -> Pool B created) ---
       const tanjim = await env.ridesService.requestRide(CAST.passengers.tanjim.id, {
@@ -501,7 +501,7 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(pB.occupiedSeats).toBe(1);
 
       const tanjimActive = (await env.ridesService.getActiveRide(CAST.passengers.tanjim.id))!;
-      expect(tanjimActive.farePaisa).toBe(15000);
+      expect(tanjimActive.farePaisa).toBe(7000);
       expect(tanjimActive.status).toBe('REQUESTED');
 
       // --- Step 5: Shirin cancels ride in Pool A ---
@@ -520,9 +520,9 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
 
       nusratActive = (await env.ridesService.getActiveRide(CAST.passengers.nusrat.id))!;
       rafiqActive = (await env.ridesService.getActiveRide(CAST.passengers.rafiq.id))!;
-      expect(nusratActive.farePaisa).toBe(10714);
-      expect(rafiqActive.farePaisa).toBe(4286);
-      expect(nusratActive.farePaisa! + rafiqActive.farePaisa!).toBe(15000);
+      expect(nusratActive.farePaisa).toBe(5000);
+      expect(rafiqActive.farePaisa).toBe(2000);
+      expect(nusratActive.farePaisa! + rafiqActive.farePaisa!).toBe(7000);
 
       const shirinHistorical = await env.ridesService.getRideById(
         shirin.rideId,

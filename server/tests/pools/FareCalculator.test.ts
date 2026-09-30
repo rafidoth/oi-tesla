@@ -6,33 +6,33 @@ describe('FareCalculator Unit Tests', () => {
   describe('calculateSoloFare with default config', () => {
     const calculator = new FareCalculator();
 
-    it('calculates solo fare for Banani -> Mohakhali (5000m) to be 15000 paisa', () => {
-      // 5000 + (5000 * 2000) / 1000 = 15000
+    it('calculates solo fare for Banani -> Mohakhali (5000m) to be 7000 paisa', () => {
+      // 2000 + (5000 * 1000) / 1000 = 7000
       const fare = calculator.calculateSoloFare(5000);
-      expect(fare).toBe(15000);
+      expect(fare).toBe(7000);
     });
 
-    it('calculates solo fare for short distance Banani -> Gulshan (2000m) to be 9000 paisa', () => {
-      // 5000 + (2000 * 2000) / 1000 = 9000
+    it('calculates solo fare for short distance Banani -> Gulshan (2000m) to be 4000 paisa', () => {
+      // 2000 + (2000 * 1000) / 1000 = 4000
       const fare = calculator.calculateSoloFare(2000);
-      expect(fare).toBe(9000);
+      expect(fare).toBe(4000);
     });
 
-    it('calculates solo fare for 0m to be base fare (5000 paisa)', () => {
+    it('calculates solo fare for 0m to be base fare (2000 paisa)', () => {
       const fare = calculator.calculateSoloFare(0);
       expect(fare).toBe(FARE_BASE_PAISA);
     });
 
     it('rounds correctly for non-multiple distances', () => {
-      // 2555m: 5000 + round(2555 * 2000 / 1000) = 5000 + round(5110) = 10110
+      // 2555m: 2000 + round(2555 * 1000 / 1000) = 2000 + round(2555) = 4555
       const fare = calculator.calculateSoloFare(2555);
-      expect(fare).toBe(10110);
+      expect(fare).toBe(4555);
     });
 
     it('calculates solo fare for long trip (10000m / 10km)', () => {
-      // 5000 + (10000 * 2000) / 1000 = 25000 paisa
+      // 2000 + (10000 * 1000) / 1000 = 12000 paisa
       const fare = calculator.calculateSoloFare(10000);
-      expect(fare).toBe(25000);
+      expect(fare).toBe(12000);
     });
 
     it('throws error for negative distance', () => {
@@ -43,16 +43,16 @@ describe('FareCalculator Unit Tests', () => {
   describe('computePoolTotal', () => {
     const calculator = new FareCalculator();
 
-    it('computes pool total for Banani -> Mohakhali (5000m) to be 15000 paisa', () => {
-      expect(calculator.computePoolTotal(5000)).toBe(15000);
+    it('computes pool total for Banani -> Mohakhali (5000m) to be 7000 paisa', () => {
+      expect(calculator.computePoolTotal(5000)).toBe(7000);
     });
 
-    it('computes pool total for Banani -> Gulshan (2000m) to be 9000 paisa', () => {
-      expect(calculator.computePoolTotal(2000)).toBe(9000);
+    it('computes pool total for Banani -> Gulshan (2000m) to be 4000 paisa', () => {
+      expect(calculator.computePoolTotal(2000)).toBe(4000);
     });
 
-    it('computes pool total for 0m to be base fare (5000 paisa)', () => {
-      expect(calculator.computePoolTotal(0)).toBe(5000);
+    it('computes pool total for 0m to be base fare (2000 paisa)', () => {
+      expect(calculator.computePoolTotal(0)).toBe(2000);
     });
 
     it('throws error for negative max leg distance', () => {
@@ -66,24 +66,23 @@ describe('FareCalculator Unit Tests', () => {
     const t2 = new Date('2026-09-26T08:01:00Z');
     const t3 = new Date('2026-09-26T08:02:00Z');
 
-    it('Step 1: Nusrat solo B->M (5000m) pays full pool total (15000 paisa)', () => {
-      const poolTotal = calculator.computePoolTotal(5000); // 15000
+    it('Step 1: Nusrat solo B->M (5000m) pays full pool total (7000 paisa)', () => {
+      const poolTotal = calculator.computePoolTotal(5000); // 7000
       const members = [{ id: 'nusrat', legDistanceM: 5000, createdAt: t1 }];
 
       const shares = calculator.splitFares(members, poolTotal);
 
       expect(shares.size).toBe(1);
-      expect(shares.get('nusrat')).toBe(15000);
+      expect(shares.get('nusrat')).toBe(7000);
       expect(Array.from(shares.values()).reduce((a, b) => a + b, 0)).toBe(poolTotal);
     });
 
-    it('Step 2: Rafiq joins B->G (2000m) — Nusrat gets 10714, Rafiq gets 4286 (sum = 15000)', () => {
-      // Max leg is 5000m -> poolTotal = 15000 paisa
+    it('Step 2: Rafiq joins B->G (2000m) — Nusrat gets 5000, Rafiq gets 2000 (sum = 7000)', () => {
+      // Max leg is 5000m -> poolTotal = 7000 paisa
       // Σlegs = 5000 + 2000 = 7000m
-      // Nusrat: raw = 15000 * 5000 / 7000 = 10714.2857 -> floor 10714, rem 2000
-      // Rafiq: raw = 15000 * 2000 / 7000 = 4285.7142 -> floor 4285, rem 5000
-      // Rafiq has largest remainder, gets +1 paisa
-      const poolTotal = 15000;
+      // Nusrat: raw = 7000 * 5000 / 7000 = 5000 -> floor 5000, rem 0
+      // Rafiq: raw = 7000 * 2000 / 7000 = 2000 -> floor 2000, rem 0
+      const poolTotal = 7000;
       const members = [
         { id: 'nusrat', legDistanceM: 5000, createdAt: t1 },
         { id: 'rafiq', legDistanceM: 2000, createdAt: t2 },
@@ -92,19 +91,19 @@ describe('FareCalculator Unit Tests', () => {
       const shares = calculator.splitFares(members, poolTotal);
 
       expect(shares.size).toBe(2);
-      expect(shares.get('nusrat')).toBe(10714);
-      expect(shares.get('rafiq')).toBe(4286);
-      expect(shares.get('nusrat')! + shares.get('rafiq')!).toBe(15000);
+      expect(shares.get('nusrat')).toBe(5000);
+      expect(shares.get('rafiq')).toBe(2000);
+      expect(shares.get('nusrat')! + shares.get('rafiq')!).toBe(7000);
     });
 
-    it('Step 3: Shirin joins B->G (2000m) — Nusrat gets 8334, Rafiq gets 3333, Shirin gets 3333 (sum = 15000, tie breaker to Nusrat)', () => {
-      // Max leg is 5000m -> poolTotal = 15000 paisa
+    it('Step 3: Shirin joins B->G (2000m) — Nusrat gets 3889, Rafiq gets 1556, Shirin gets 1555 (sum = 7000, tie breaker to Rafiq)', () => {
+      // Max leg is 5000m -> poolTotal = 7000 paisa
       // Σlegs = 5000 + 2000 + 2000 = 9000m
-      // Nusrat: raw = 15000 * 5000 / 9000 = 8333.333 -> floor 8333, rem 3000
-      // Rafiq: raw = 15000 * 2000 / 9000 = 3333.333 -> floor 3333, rem 3000
-      // Shirin: raw = 15000 * 2000 / 9000 = 3333.333 -> floor 3333, rem 3000
-      // All remainders tied at 3000. Earliest createdAt (Nusrat t1) gets +1 paisa.
-      const poolTotal = 15000;
+      // Nusrat: raw = 7000 * 5000 / 9000 = 3888.888 -> floor 3888, rem 8000
+      // Rafiq: raw = 7000 * 2000 / 9000 = 1555.555 -> floor 1555, rem 5000
+      // Shirin: raw = 7000 * 2000 / 9000 = 1555.555 -> floor 1555, rem 5000
+      // Remaining paisa: 2. Nusrat gets 1 (largest rem 8000). Rafiq and Shirin tie (5000); Rafiq has earlier createdAt (t2 vs t3) -> gets 1.
+      const poolTotal = 7000;
       const members = [
         { id: 'nusrat', legDistanceM: 5000, createdAt: t1 },
         { id: 'rafiq', legDistanceM: 2000, createdAt: t2 },
@@ -114,10 +113,10 @@ describe('FareCalculator Unit Tests', () => {
       const shares = calculator.splitFares(members, poolTotal);
 
       expect(shares.size).toBe(3);
-      expect(shares.get('nusrat')).toBe(8334);
-      expect(shares.get('rafiq')).toBe(3333);
-      expect(shares.get('shirin')).toBe(3333);
-      expect(shares.get('nusrat')! + shares.get('rafiq')! + shares.get('shirin')!).toBe(15000);
+      expect(shares.get('nusrat')).toBe(3889);
+      expect(shares.get('rafiq')).toBe(1556);
+      expect(shares.get('shirin')).toBe(1555);
+      expect(shares.get('nusrat')! + shares.get('rafiq')! + shares.get('shirin')!).toBe(7000);
     });
   });
 

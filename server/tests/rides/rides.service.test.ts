@@ -87,7 +87,7 @@ describe('RidesService Unit Tests', () => {
         destLocationId: 4,
         distanceM: 5000,
         seats: 1,
-        soloFarePaisa: 15000,
+        soloFarePaisa: 7000,
         currency: 'BDT',
       });
     });
@@ -126,7 +126,7 @@ describe('RidesService Unit Tests', () => {
         destLocationId: 4,
         seats: 1,
         paymentMethod: 'CASH',
-        estimateFarePaisa: 15000,
+        estimateFarePaisa: 7000,
       });
       mockPoolsService.joinPoolWithFallback.mockResolvedValue({
         poolId: 'pool-uuid-1',
@@ -138,7 +138,7 @@ describe('RidesService Unit Tests', () => {
         passengerId,
         poolId: 'pool-uuid-1',
         seats: 1,
-        farePaisa: 15000,
+        farePaisa: 7000,
       });
       mockEventsService.logRideEvent.mockResolvedValue({} as any);
 
@@ -154,7 +154,7 @@ describe('RidesService Unit Tests', () => {
           destLocationId: 4,
           seats: 1,
           paymentMethod: 'CASH',
-          estimateFarePaisa: 15000,
+          estimateFarePaisa: 7000,
         },
         mockTx
       );
@@ -172,7 +172,7 @@ describe('RidesService Unit Tests', () => {
           passengerId,
           poolId: 'pool-uuid-1',
           seats: 1,
-          farePaisa: 15000,
+          farePaisa: 7000,
         },
         mockTx
       );
@@ -189,7 +189,7 @@ describe('RidesService Unit Tests', () => {
             seats: 1,
             pickupLocationId: 2,
             destLocationId: 4,
-            estimateFarePaisa: 15000,
+            estimateFarePaisa: 7000,
           },
         },
         mockTx
@@ -214,7 +214,7 @@ describe('RidesService Unit Tests', () => {
         poolId: 'pool-uuid-1',
         status: 'OPEN',
         seats: 1,
-        estimateFarePaisa: 15000,
+        estimateFarePaisa: 7000,
         paymentMethod: 'CASH',
         isNewPool: true,
       });
@@ -230,7 +230,7 @@ describe('RidesService Unit Tests', () => {
         destLocationId: 4,
         seats: 1,
         paymentMethod: 'CASH',
-        estimateFarePaisa: 15000,
+        estimateFarePaisa: 7000,
       });
       mockPoolsService.joinPoolWithFallback.mockResolvedValue({
         poolId: 'pool-uuid-existing',
@@ -242,7 +242,7 @@ describe('RidesService Unit Tests', () => {
         passengerId,
         poolId: 'pool-uuid-existing',
         seats: 1,
-        farePaisa: 15000,
+        farePaisa: 7000,
       });
       mockEventsService.logRideEvent.mockResolvedValue({} as any);
 
@@ -261,7 +261,7 @@ describe('RidesService Unit Tests', () => {
             seats: 1,
             pickupLocationId: 2,
             destLocationId: 4,
-            estimateFarePaisa: 15000,
+            estimateFarePaisa: 7000,
           },
         },
         mockTx
@@ -283,7 +283,7 @@ describe('RidesService Unit Tests', () => {
         poolId: 'pool-uuid-existing',
         status: 'MATCHED',
         seats: 1,
-        estimateFarePaisa: 15000,
+        estimateFarePaisa: 7000,
         paymentMethod: 'CASH',
         isNewPool: false,
       });
