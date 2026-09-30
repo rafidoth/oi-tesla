@@ -1,6 +1,6 @@
 # OiTesla
 
-Shared ride-pooling platform for electric auto-rickshaws in Dhaka.
+Shared ride-pooling platform for electric auto-rickshaws in Dhaka
 
 [Video Link](https://drive.google.com/drive/folders/1Cx5rL3A4G0xo8seoMIqwuvdmPSxEB0GR?usp=sharing)
 
