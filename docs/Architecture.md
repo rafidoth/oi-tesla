@@ -254,6 +254,7 @@ Why this is airtight:
 | Driver offline | Accept requires `ONLINE`; an offline driver's existing active rides continue untouched (PRD Section 14) |
 | Driver accepts two pools at once | Partial unique active-pool index aborts the second accept |
 | Vehicle smaller than pool | `409 VEHICLE_TOO_SMALL` at accept; pool stays `OPEN` |
+| Passenger alights at intermediate stop before final destination | Deferred settlement: Per-passenger drop-off transitions and mid-trip settlement are unhandled in the MVP (D9, D15, Section 13 #10). Fares remain frozen from `STARTED`; `PENDING` payment records for all active members are created atomically when the pool reaches `COMPLETED` at the terminal destination. |
 
 ---
 
@@ -272,7 +273,7 @@ poolTotal          = FARE_BASE_PAISA + FARE_PER_KM_PAISA × tripDistance / 1000
 share(member)      = poolTotal × leg(member) / Σ legs          (integer arithmetic — Section 6.3)
 ```
 
-Configuration (env, PRD Section 8.1 "configuration, not hard-coded"): `FARE_BASE_PAISA=5000` (50 BDT), `FARE_PER_KM_PAISA=2000` (20 BDT/km), `NOMINAL_POOL_CAPACITY=3`.
+Configuration (env, PRD Section 8.1 "configuration, not hard-coded"): `FARE_BASE_PAISA=2000` (20 BDT), `FARE_PER_KM_PAISA=1000` (10 BDT/km), `NOMINAL_POOL_CAPACITY=3`.
 
 Sharing **is** the discount: the vehicle-trip total is what one solo rider would pay to the farthest stop, and everyone splitting it pays less as the pool fills. There is no separate `poolDiscount` term — see [Section 13](#13-prd-deviations--clarifications).
 
@@ -285,23 +286,25 @@ Sharing **is** the discount: the vehicle-trip total is what one solo rider would
 | Pool enters `STARTED` | Fares **frozen** on `passenger_rides.fare_paisa` — the number the passenger pays |
 | Pool `COMPLETED` | `PENDING` payment created per active member at the frozen amount (D15) |
 
+> **Intermediate Drop-Off Edge Case:** In pools with multiple drop-offs along a route (e.g., Banani → Gulshan → Mohakhali), passengers with intermediate drop-offs physically alight earlier during the trip. In the MVP, their settlement is deferred until the pool-level `COMPLETED` event at the terminal stop; per-passenger drop-off lifecycle states and mid-trip payment generation are unhandled.
+
 ### 6.3 Rounding — largest remainder
 
 `share = floor(poolTotal × leg / Σlegs)` per member; the leftover paisa (0..members−1) are assigned to the largest fractional remainders, ties broken by earliest `passenger_rides.created_at`. **The shares always sum to exactly `poolTotal`.** Pure integer arithmetic, unit-tested against adversarial splits.
 
 ### 6.4 Worked example — Banani Rush Hour (PRD Section 18)
 
-Config: `FARE_BASE_PAISA=5000`, `FARE_PER_KM_PAISA=2000`; C1 legs: B→G 2000 m (2.0 km), B→M 5000 m (5.0 km).
+Config: `FARE_BASE_PAISA=2000`, `FARE_PER_KM_PAISA=1000`; C1 legs: B→G 2000 m (2.0 km), B→M 5000 m (5.0 km).
 
 | Step | Pool A state | Fares (paisa) |
 |---|---|---|
-| Nusrat requests B→M, 1 seat | OPEN, 1/3 | Solo: 5000 + 2000×5 = **15000** |
-| Rafiq requests B→G, 1 seat → joins | OPEN, 2/3 | total 15000; legs 5000/2000 (Σ7000) → Nusrat **10714**, Rafiq **4286** (one remainder paisa to Rafiq) |
-| Shirin requests B→G, 1 seat → joins | OPEN, 3/3 | legs 5000/2000/2000 (Σ9000) → Nusrat **8334** (tie-break), Rafiq **3333**, Shirin **3333** |
-| 4th passenger requests B→M | Pool A guard fails (3+1>3) → **Pool B** created (OPEN, 1/3, solo 15000) | Pool A untouched at 3/3 |
+| Nusrat requests B→M, 1 seat | OPEN, 1/3 | Solo: 2000 + 1000×5 = **7000** |
+| Rafiq requests B→G, 1 seat → joins | OPEN, 2/3 | total 7000; legs 5000/2000 (Σ7000) → Nusrat **5000**, Rafiq **2000** |
+| Shirin requests B→G, 1 seat → joins | OPEN, 3/3 | legs 5000/2000/2000 (Σ9000) → Nusrat **3889** (tie-break), Rafiq **1556** (tie-break), Shirin **1555** |
+| 4th passenger requests B→M | Pool A guard fails (3+1>3) → **Pool B** created (OPEN, 1/3, solo 7000) | Pool A untouched at 3/3 |
 | Jashim accepts Pool A | MATCHED (Bullet 3 ≥ 3) | — |
-| arrive → start | DRIVER_ARRIVED → STARTED | **Frozen: 8334 / 3333 / 3333** |
-| complete | COMPLETED | Payments `PENDING`: Nusrat 8334 (TESLAPAY), Rafiq 3333, Shirin 3333 (CASH) |
+| arrive → start | DRIVER_ARRIVED → STARTED | **Frozen: 3889 / 1556 / 1555** |
+| complete | COMPLETED | Payments `PENDING`: Nusrat 3889 (TESLAPAY), Rafiq 1556, Shirin 1555 (CASH) |
 | settlement | Nusrat clicks pay → `PAID`; Jashim marks cash received ×2 → `PAID` | All `PAID`, each with `marked_by` |
 
 Each passenger sees **only their own** fare (PRD Section 11) — the roster with fares is driver-only data.
@@ -412,7 +415,7 @@ services:
   web:       # client image, PORT 3000, NEXT_PUBLIC_API_BASE_URL=http://localhost:3001/api
 ```
 
-- **`.env.example`** at root (committed): `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=24h`, `CLIENT_ORIGIN`, `FARE_BASE_PAISA=5000`, `FARE_PER_KM_PAISA=2000`, `NOMINAL_POOL_CAPACITY=3`.
+- **`.env.example`** at root (committed): `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=24h`, `CLIENT_ORIGIN`, `FARE_BASE_PAISA=2000`, `FARE_PER_KM_PAISA=1000`, `NOMINAL_POOL_CAPACITY=3`.
 - **Migrations** are files in `server/src/db/migrations` — generated by `drizzle-kit generate` and applied by the `migrate` service (`drizzle-kit migrate`) before the API starts; the compose dependency chain makes a cold `up` fully reproducible.
 - **Seed** (`npm run db:seed` / `src/db/seed.ts`): 8 locations with Section 12 coordinates; routes C1–C5 with consistent segment distances; **Jashim** (driver, vehicle **Bullet**, capacity 3, ONLINE), passengers **Nusrat, Rafiq, Shirin** (+ **Tanjim** for the 4th-passenger rejection), demo password documented in the README. Seed is idempotent.
 - **`make demo`**: replays PRD Section 18 (Step 1–8) against the running stack via the API, printing pool occupancy and fares at each step — the acceptance scenario reproducible from a clean database (PRD Section 19).
@@ -450,6 +453,7 @@ Every place this architecture departs from — or pins down — the PRD, made ex
 | 7 | Served routes | — | Requests on location pairs with no route are rejected `ROUTE_NOT_SERVED` | Deterministic fares require known distances; the seed covers all demo-relevant pairs; auto-generated routes are future work |
 | 8 | Real-time status | "passengers see status" | 5s polling, no push | PRD never requires push; free-tier hosting punishes persistent connections |
 | 9 | Payments (Section 8.4) | States PENDING/PAID/FAILED | Payment rows created at `COMPLETED` only | Long-lived PENDING rows for cancelled rides would need cleanup; payments never gate the lifecycle |
+| 10 | Intermediate drop-offs / mid-trip settlement | Physical drop-off happens mid-trip | Handled only at pool `COMPLETED` | Per-passenger stop progression and early drop-off settlement require turn-by-turn/stop progression, excluded in MVP (D9). Fares are already frozen at `STARTED`, so delaying payment row generation to pool completion preserves deterministic fare totals without mid-route driver UI gates. |
 
 ---
 
@@ -457,9 +461,9 @@ Every place this architecture departs from — or pins down — the PRD, made ex
 
 | PRD step | API sequence | Effect |
 |---|---|---|
-| 1. Nusrat requests B→M ×1 | `POST /api/rides` | Ride `REQUESTED`, estimate **15000 paisa**; Pool A created (OPEN 1/3) |
-| 2. Rafiq requests B→G ×1 | `POST /api/rides` | Matcher: same pickup, C1 covers both dests, 2 ≤ 3 → joins Pool A (OPEN 2/3); fares recomputed (10714 / 4286) |
-| 3. Shirin requests B→G ×1 | `POST /api/rides` | Joins Pool A (OPEN 3/3); fares 8334 / 3333 / 3333 |
+| 1. Nusrat requests B→M ×1 | `POST /api/rides` | Ride `REQUESTED`, estimate **7000 paisa**; Pool A created (OPEN 1/3) |
+| 2. Rafiq requests B→G ×1 | `POST /api/rides` | Matcher: same pickup, C1 covers both dests, 2 ≤ 3 → joins Pool A (OPEN 2/3); fares recomputed (5000 / 2000) |
+| 3. Shirin requests B→G ×1 | `POST /api/rides` | Joins Pool A (OPEN 3/3); fares 3889 / 1556 / 1555 |
 | 4. Tanjim requests B→M ×1 | `POST /api/rides` | Pool A guard fails (3+1>3) → **Pool B** (OPEN 1/3); Pool A stays 3/3 — `409` never destroys the request |
 | 5. Jashim accepts + arrives | `POST …/pools/A/accept`, `…/arrive` | Pool A `MATCHED` (Bullet 3 ≥ 3) → all three rides show `MATCHED`, then `DRIVER_ARRIVED` (5s poll) |
 | 6. Start | `POST …/pools/A/start` | `STARTED`; fares frozen; any join attempt now → `422` |

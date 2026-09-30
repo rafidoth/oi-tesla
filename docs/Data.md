@@ -8,8 +8,8 @@
 - [6. Database Schema](#6-database-schema)
   - [users](#users)
   - [vehicles](#vehicles)
-  - [locations — PRD Section 12 reference data (formerly zones)](#locations--prd-section-12-reference-data-formerly-zones)
-  - [routes — the overlap model (formerly corridors)](#routes--the-overlap-model-formerly-corridors)
+  - [locations — PRD Section 12 reference data](#locations--prd-section-12-reference-data)
+  - [routes — the overlap model](#routes--the-overlap-model)
   - [route_stops — ordered chain of locations](#route_stops--ordered-chain-of-locations)
   - [route_segments — the editable source of distances](#route_segments--the-editable-source-of-distances)
   - [ride_requests — the original ask (immutable after creation)](#ride_requests--the-original-ask-immutable-after-creation)
@@ -78,7 +78,9 @@ All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables 
 | status | TEXT | NOT NULL, DEFAULT 'OFFLINE', CHECK `status IN ('ONLINE','OFFLINE')` |
 | created_at / updated_at | TIMESTAMPTZ | |
 
-### locations — PRD Section 12 reference data (formerly zones)
+### locations — PRD Section 12 reference data
+
+> **Terminology Note:** Use **location** as the official domain term for pick-up, drop-off, and stop points (avoid "zone").
 
 | column | type | constraints |
 |---|---|---|
@@ -86,7 +88,9 @@ All transactional tables use `UUID` PKs (`gen_random_uuid()`); reference tables 
 | name | TEXT | NOT NULL, UNIQUE (Banani, Gulshan, …) |
 | lat / lng | NUMERIC(9,6) | NOT NULL (representative coords, kept for display/future use) |
 
-### routes — the overlap model (formerly corridors)
+### routes — the overlap model
+
+> **Terminology Note:** Use **route** as the official domain term for transit chains and the overlap model (avoid "corridor").
 
 | column | type | constraints |
 |---|---|---|

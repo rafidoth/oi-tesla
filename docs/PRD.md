@@ -241,7 +241,7 @@ Money is stored and calculated in integer **paisa**, never as decimal or floatin
 
 ### 8.4 Payment
 
-The MVP supports two payment methods: `CASH` and a simulated `TESLAPAY` (no external gateway required). Payment states: `PENDING`, `PAID`, `FAILED`. Payment tracking begins once a ride is completed, and remains `PENDING` until settled — the passenger confirms TeslaPay, or the driver confirms cash received.
+The MVP supports two payment methods: `CASH` and a simulated `TESLAPAY` (no external gateway required). Payment states: `PENDING`, `PAID`, `FAILED`. Payment tracking begins once a ride is completed, and remains `PENDING` until settled — the passenger confirms TeslaPay, or the driver confirms cash received. *Note: In the MVP, payment records are initialized only when the overall pool completes, deferring settlement for passengers who alight at intermediate locations along the route.*
 
 ---
 
@@ -307,6 +307,10 @@ The MVP must explicitly handle:
 * **Concurrent seat allocation** — Two requests competing for the final seat must be resolved so capacity is never exceeded.
 * **Non-compatible destination** — Requests that fail the compatibility rule must never be pooled together.
 * **Already-started ride** — A passenger cannot join a pool after it has started.
+
+**Known Unhandled Edge Cases & Future Limitations:**
+
+* **Intermediate drop-off settlement (Unhandled / Current Limitation)** — In a pooled ride serving multiple drop-off locations along a supported route (e.g. Banani → Gulshan → Mohakhali), passengers heading to closer stops physically alight mid-trip before the vehicle reaches the final stop. Under the current MVP lifecycle, payment records are created at the pool level only when the entire trip is marked `COMPLETED` by the driver. As a result, intermediate passengers cannot settle their fares (via TeslaPay or cash) at their physical moment of departure; settlement remains deferred until the driver completes the final pool leg. Individual per-passenger drop-off state transitions and mid-trip settlement are unhandled in the MVP.
 
 ---
 
