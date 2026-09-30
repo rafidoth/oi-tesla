@@ -48,7 +48,7 @@ One trusted first-party client with a fixed set of screens; resource-oriented en
 | `GET /api/locations` | Reference locations (+ served pairs) for the request form |
 | `POST /api/rides` | `{pickupLocationId, destLocationId, seats, paymentMethod?}` → ride + pool snapshot + estimate; triggers eager matching ([`Architecture.md Section 4.3`](./Architecture.md#43-formation-flow-eager-deterministic--d1-d6)) |
 | `GET /api/rides` | Own rides (history + active), newest first |
-| `GET /api/rides/:id` | Own ride: derived status, current fare, pool summary (**no other passenger's data**, PRD Section 11) |
+| `GET /api/rides/:id` | Own ride: derived status, current fare, pool summary, and co-passengers' first names + destinations (PRD Section 11; **no fares or IDs leaked**) |
 | `POST /api/rides/:id/cancel` | Permitted only while derived status is `REQUESTED`/`MATCHED` ([`Architecture.md Section 3.2`](./Architecture.md#32-derived-passenger-ride-status-no-stored-per-ride-state)) |
 | `POST /api/rides/:id/pay` | TeslaPay simulation: `PENDING → PAID`, `marked_by` = passenger |
 

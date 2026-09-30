@@ -322,7 +322,7 @@ Two layers, both enforced in the service, never the client:
 1. **Role gate** (middleware): `/api/driver/*` requires `role=DRIVER`; `/api/rides` requires `PASSENGER`.
 2. **Ownership gate** (service): every passenger-scoped query is filtered by `passenger_id = req.user.sub`; drivers may only touch pools where `pool.driver_id = req.user.sub` (post-accept) or accept `OPEN` pools while online. Foreign resources return `404` (no existence leaks), unauthorized mutations return `403`.
 
-Data-visibility rules are structural: the passenger ride payload contains no other passenger's fare or identity; only the driver roster endpoint returns co-passenger details.
+Data-visibility rules are structural: the passenger ride payload exposes co-passengers' first names and destination locations (for safety awareness, D16) but contains no other passenger's fare, payment details, or internal IDs. The driver roster endpoint returns the full co-passenger roster with fares and payment status.
 
 ### 7.3 Hardening
 

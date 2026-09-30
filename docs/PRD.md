@@ -84,7 +84,7 @@ The MVP will **not** implement: live GPS tracking, Google Maps or other commerci
 
 A passenger can sign up/in, request a ride (pickup, destination, seats), view their estimated fare, view their ride status, join a compatible pool, cancel a ride when permitted, and view their own ride history, fare, and payment status.
 
-A passenger **must not** be able to view another passenger's fare or personal ride information.
+A passenger **must not** be able to view another passenger's fare, payment details, or booking information. A passenger **may** see co-passengers' first names and destination locations to understand who they are sharing the vehicle with.
 
 ### 3.2 Driver
 
@@ -270,7 +270,7 @@ The MVP supports two payment methods: `CASH` and a simulated `TESLAPAY` (no exte
 
 ## 11. Authorization & Data Visibility
 
-**Passenger** can access: own profile, own rides, own fares, own payment records. Cannot access: another passenger's fare or ride history, or driver administrative information.
+**Passenger** can access: own profile, own rides, own fares, own payment records, and co-passengers' first names and destination locations within the same pool. Cannot access: another passenger's fare, payment details, ride history, or driver administrative information.
 
 **Driver** can access: own vehicle, pools they've accepted, passengers assigned to those pools, and their own ride history. A driver cannot modify another driver's vehicle or rides.
 
