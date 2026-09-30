@@ -110,6 +110,7 @@ describe('RidesService Privacy & Active Ride Queries', () => {
     findRideDetailsById: ReturnType<typeof vi.fn>;
     createRideRequest: ReturnType<typeof vi.fn>;
     createPassengerRide: ReturnType<typeof vi.fn>;
+    findCoPassengersByPoolId: ReturnType<typeof vi.fn>;
   };
   let mockLocationsService: {
     getDistance: ReturnType<typeof vi.fn>;
@@ -174,6 +175,9 @@ describe('RidesService Privacy & Active Ride Queries', () => {
       findRideDetailsById: vi.fn(),
       createRideRequest: vi.fn(),
       createPassengerRide: vi.fn(),
+      findCoPassengersByPoolId: vi.fn().mockResolvedValue([
+        { name: 'Rafiq Ahmed', destLocationName: 'Gulshan', seats: 1 },
+      ]),
     };
     mockLocationsService = {
       getDistance: vi.fn(),
@@ -212,7 +216,7 @@ describe('RidesService Privacy & Active Ride Queries', () => {
       expect(result).toBeNull();
     });
 
-    it('returns sanitized active ride details without leaking co-passenger data', async () => {
+    it('returns sanitized active ride details with co-passenger names and destinations (D16)', async () => {
       mockRidesRepo.findActiveRideDetailsByPassengerId.mockResolvedValue(mockActiveRecord);
 
       const result = await ridesService.getActiveRide('passenger-uuid-nusrat');
@@ -241,6 +245,9 @@ describe('RidesService Privacy & Active Ride Queries', () => {
         status: 'MATCHED',
         capacity: 3,
         occupiedSeats: 2,
+        coPassengers: [
+          { name: 'Rafiq Ahmed', destLocationName: 'Gulshan', seats: 1 },
+        ],
         driver: { name: 'Jashim Uddin' },
         vehicle: {
           name: 'Bullet',
@@ -249,11 +256,10 @@ describe('RidesService Privacy & Active Ride Queries', () => {
         },
       });
 
-      // STRICT PRIVACY SANITIZATION ASSERTIONS (PRD Section 11 & Task 7.1.6):
-      // Must NOT leak co-passengers' names, user IDs, individual fares, destinations, or rosters!
+      // D16 PRIVACY ASSERTIONS: co-passengers expose name + destination only.
+      // Must NOT leak fares, passenger IDs, payment info, or full rosters at the top level.
       const rawResult = result as Record<string, unknown>;
       expect(rawResult).not.toHaveProperty('passengers');
-      expect(rawResult).not.toHaveProperty('coPassengers');
       expect(rawResult).not.toHaveProperty('co_passengers');
       expect(rawResult).not.toHaveProperty('members');
       expect(rawResult).not.toHaveProperty('roster');
@@ -263,7 +269,16 @@ describe('RidesService Privacy & Active Ride Queries', () => {
       expect(poolObj).not.toHaveProperty('passengers');
       expect(poolObj).not.toHaveProperty('members');
       expect(poolObj).not.toHaveProperty('roster');
-      expect(poolObj).not.toHaveProperty('coPassengers');
+
+      // Verify co-passenger entries contain ONLY allowed fields (no fares, IDs, payment info)
+      const coPassenger = result!.pool.coPassengers[0] as Record<string, unknown>;
+      expect(Object.keys(coPassenger).sort()).toEqual(['destLocationName', 'name', 'seats']);
+      expect(coPassenger).not.toHaveProperty('id');
+      expect(coPassenger).not.toHaveProperty('passengerId');
+      expect(coPassenger).not.toHaveProperty('farePaisa');
+      expect(coPassenger).not.toHaveProperty('fare');
+      expect(coPassenger).not.toHaveProperty('paymentMethod');
+      expect(coPassenger).not.toHaveProperty('paymentStatus');
     });
 
     it('falls back to original estimate if passenger farePaisa is null', async () => {
@@ -298,11 +313,32 @@ describe('RidesService Privacy & Active Ride Queries', () => {
       expect(result!.pool.driver).toBeNull();
       expect(result!.pool.vehicle).toBeNull();
     });
+    it('invokes findCoPassengersByPoolId with poolId and passengerId to exclude requester', async () => {
+      mockRidesRepo.findActiveRideDetailsByPassengerId.mockResolvedValue(mockActiveRecord);
+      mockRidesRepo.findCoPassengersByPoolId.mockResolvedValue([
+        { name: 'Rafiq', destLocationName: 'Gulshan', seats: 1 },
+        { name: 'Shirin', destLocationName: 'Mohakhali', seats: 1 },
+      ]);
+
+      const result = await ridesService.getActiveRide('passenger-uuid-nusrat');
+
+      expect(mockRidesRepo.findCoPassengersByPoolId).toHaveBeenCalledWith(
+        'pool-uuid-1',
+        'passenger-uuid-nusrat'
+      );
+      expect(result!.pool.coPassengers).toEqual([
+        { name: 'Rafiq', destLocationName: 'Gulshan', seats: 1 },
+        { name: 'Shirin', destLocationName: 'Mohakhali', seats: 1 },
+      ]);
+    });
   });
 
   describe('getRideById', () => {
-    it('returns ride details for the owner passenger', async () => {
+    it('returns ride details for the owner passenger including co-passengers', async () => {
       mockRidesRepo.findRideDetailsById.mockResolvedValue(mockActiveRecord);
+      mockRidesRepo.findCoPassengersByPoolId.mockResolvedValue([
+        { name: 'Rafiq', destLocationName: 'Gulshan', seats: 1 },
+      ]);
 
       const result = await ridesService.getRideById('ride-uuid-nusrat', 'passenger-uuid-nusrat');
 
@@ -310,8 +346,15 @@ describe('RidesService Privacy & Active Ride Queries', () => {
         'ride-uuid-nusrat',
         'passenger-uuid-nusrat'
       );
+      expect(mockRidesRepo.findCoPassengersByPoolId).toHaveBeenCalledWith(
+        'pool-uuid-1',
+        'passenger-uuid-nusrat'
+      );
       expect(result.id).toBe('ride-uuid-nusrat');
       expect(result.passengerId).toBe('passenger-uuid-nusrat');
+      expect(result.pool.coPassengers).toEqual([
+        { name: 'Rafiq', destLocationName: 'Gulshan', seats: 1 },
+      ]);
     });
 
     it('throws NotFoundError when querying another passenger ride ID (preventing resource existence leaks)', async () => {

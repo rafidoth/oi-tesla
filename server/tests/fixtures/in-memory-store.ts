@@ -6,6 +6,7 @@ import type {
   ActiveRideRecord,
   PassengerRideRow,
   RideRequestRow,
+  CoPassengerRow,
 } from '../../src/modules/rides/rides.repository.js';
 import type { RouteWithStops } from '../../src/modules/locations/locations.repository.js';
 import type { Location, RouteSegment } from '../../src/db/schema/index.js';
@@ -479,6 +480,33 @@ export class InMemoryRidesRepository {
     const pool = this.store.pools.get(ride.poolId);
     if (!pool) return null;
     return this.mapActiveRide(ride, pool);
+  }
+
+  async findCoPassengersByPoolId(
+    poolId: string,
+    excludePassengerId: string,
+    _tx?: any
+  ): Promise<CoPassengerRow[]> {
+    const results: CoPassengerRow[] = [];
+    for (const ride of this.store.passengerRides.values()) {
+      if (
+        ride.poolId === poolId &&
+        ride.cancelledAt === null &&
+        ride.passengerId !== excludePassengerId
+      ) {
+        const passenger = this.store.users.get(ride.passengerId);
+        const req = this.store.rideRequests.get(ride.rideRequestId);
+        const destLoc = req ? this.store.locations.get(req.destLocationId) : null;
+        if (passenger && destLoc) {
+          results.push({
+            name: passenger.name,
+            destLocationName: destLoc.name,
+            seats: ride.seats,
+          });
+        }
+      }
+    }
+    return results;
   }
 
   private mapActiveRide(ride: PassengerRideRow, pool: PoolRow): ActiveRideRecord {

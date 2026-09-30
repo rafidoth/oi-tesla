@@ -30,6 +30,7 @@ import type {
   ActiveRideRecord,
   PassengerRideTeslaPaySettlementInfo,
   PassengerRideHistoryRecord,
+  CoPassengerRow,
 } from './rides.repository.js';
 
 type DbType = typeof db;
@@ -184,7 +185,11 @@ export class RidesService {
       return null;
     }
 
-    return this.formatRideDetails(record);
+    const coPassengers = await this.ridesRepo.findCoPassengersByPoolId(
+      record.poolId,
+      record.passengerId
+    );
+    return this.formatRideDetails(record, coPassengers);
   }
 
   async getRideById(rideId: string, passengerId: string): Promise<ActiveRideDetailsDto> {
@@ -193,7 +198,11 @@ export class RidesService {
       throw new NotFoundError('RIDE_NOT_FOUND', 'Ride not found');
     }
 
-    return this.formatRideDetails(record);
+    const coPassengers = await this.ridesRepo.findCoPassengersByPoolId(
+      record.poolId,
+      record.passengerId
+    );
+    return this.formatRideDetails(record, coPassengers);
   }
 
   async getPassengerRideHistory(
@@ -284,7 +293,10 @@ export class RidesService {
     });
   }
 
-  private formatRideDetails(record: ActiveRideRecord): ActiveRideDetailsDto {
+  private formatRideDetails(
+    record: ActiveRideRecord,
+    coPassengers: CoPassengerRow[] = []
+  ): ActiveRideDetailsDto {
     const ride = new Ride({
       id: record.id,
       rideRequestId: record.rideRequestId,
@@ -330,6 +342,11 @@ export class RidesService {
         status: record.pool.status,
         capacity: record.pool.capacity,
         occupiedSeats: record.pool.occupiedSeats,
+        coPassengers: coPassengers.map((cp) => ({
+          name: cp.name,
+          destLocationName: cp.destLocationName,
+          seats: cp.seats,
+        })),
         driver: record.driver ? { name: record.driver.name } : null,
         vehicle: record.vehicle
           ? {

@@ -20,10 +20,11 @@ From the design review that produced this document. Each is enforced somewhere c
   - [D13: Type sharing](#d13-type-sharing)
   - [D14: Live status](#d14-live-status)
   - [D15: Payments](#d15-payments)
+  - [D16: Co-passenger visibility](#d16-co-passenger-visibility)
 
 ---
 
-## Decisions Index (D1–D15)
+## Decisions Index (D1–D16)
 
 | # | Decision | Choice & rationale |
 |---|---|---|
@@ -42,3 +43,4 @@ From the design review that produced this document. Each is enforced somewhere c
 | <a id="d13-type-sharing"></a>D13 | Type sharing | TypeScript on both sides; DTO types duplicated per app against one API contract ([`API.md`](./API.md)), verified against the API specification and manual testing. No workspace tooling — the existing `client/` scaffold stays untouched. |
 | <a id="d14-live-status"></a>D14 | Live status | 5-second polling (React Query `refetchInterval`) on active screens. No SSE/WebSockets — they fight free-tier spin-downs and the PRD never requires push. |
 | <a id="d15-payments"></a>D15 | Payments | A `PENDING` payment row is created per active ride at `COMPLETED`; TeslaPay = passenger click → instant `PAID` (simulated); CASH = driver marks received → `PAID`. Payments are settlement bookkeeping, never a lifecycle gate. |
+| <a id="d16-co-passenger-visibility"></a>D16 | Co-passenger visibility | **Named cards.** Passengers in the same pool can see co-passengers' first names and destination locations at all pool statuses. No fares, IDs, payment details, or booking information are exposed. This lets passengers know who they're sharing the ride with for safety and awareness. Implemented as a `coPassengers` array in the active ride response. |
