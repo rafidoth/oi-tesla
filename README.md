@@ -5,6 +5,7 @@ Shared ride-pooling platform for electric three-wheelers in Dhaka.
 ## Table of Contents
 
 - [Problem Statement](#problem-statement)
+- [Tech Stack](#tech-stack)
 - [Feature List](#feature-list)
   - [1. Account and Profile Management](#1-account-and-profile-management)
   - [2. Ride Booking and Upfront Fare Estimates](#2-ride-booking-and-upfront-fare-estimates)
@@ -18,7 +19,11 @@ Shared ride-pooling platform for electric three-wheelers in Dhaka.
   - [10. Payment Settlement](#10-payment-settlement)
   - [11. Ride History and Audit Log](#11-ride-history-and-audit-log)
   - [12. Privacy and Data Separation](#12-privacy-and-data-separation)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
 - [Database Schema](#database-schema)
+- [API Overview](#api-overview)
 - [Documentation Index](#documentation-index)
 
 ---
@@ -30,6 +35,29 @@ During Dhaka’s peak hours, passengers traveling along overlapping routes often
 This creates three concrete problems: passengers pay unnecessarily high fares for solo trips, drivers leave seats unused, and multiple vehicles make similar journeys through congested roads.
 
 ---
+
+## Tech Stack
+
+| Layer | Technology | Version |
+|---|---|---|
+| Frontend | Next.js (App Router) + React + TypeScript | Next 16, React 19 |
+| Styling | Tailwind CSS v4 + shadcn/ui | Tailwind 4, shadcn 4 |
+| State Management | Zustand + TanStack React Query | Zustand 5, RQ 5 |
+| HTTP Client | Axios | 1.20 |
+| Backend | Node.js + Express + TypeScript | Node 20+, Express 4 |
+| Database | PostgreSQL | 18 (Alpine) |
+| ORM | Drizzle ORM + Drizzle Kit | 0.45 |
+| Auth | JWT (HS256) via `jose` | 6.x |
+| Validation | Zod | 3.24 |
+| Logging | pino + pino-http | 9.x / 10.x |
+| Testing | Vitest | 5.x |
+| Containerization | Docker Compose | multi-stage build |
+| Money | Integer paisa (`BIGINT`) | — |
+
+> See [`docs/Tech-stack.md`](docs/Tech-stack.md) for detailed justifications behind each choice.
+
+---
+
 
 ## Feature List
 
@@ -43,6 +71,8 @@ The system maintains two distinct user roles with dedicated interfaces and permi
 * **Session Management:** Authenticated sessions issue JSON Web Tokens (JWT) valid for 24 hours. The web client stores tokens in session memory to preserve active sessions across page refreshes while restricting persistence to browser close.
 
 ### 2. Ride Booking and Upfront Fare Estimates
+
+![Ride Booking and Upfront Fare Estimates](assets/feature-ride-booking-upfront-fare.gif)
 
 Passengers request rides through an interactive booking form that prices trips prior to driver dispatch:
 
@@ -63,6 +93,8 @@ The platform matches riders along fixed directional routes with predetermined se
 
 ### 4. Deterministic Ride-Pooling Engine
 
+![Deterministic Ride-Pooling Engine](assets/feature-ride-poo-matching.gif)
+
 When a passenger books a trip, the system immediately pairs them with a compatible pool or opens a new pool:
 
 * **Eager Formation:** The platform places every booking into a pool the moment the passenger requests it, grouping compatible passengers before a driver accepts.
@@ -76,6 +108,8 @@ When a passenger books a trip, the system immediately pairs them with a compatib
 * **Capacity Overflow Handling:** If an existing pool reaches full capacity, the platform does not drop incoming requests. It places the new request into a separate open pool for another driver to accept.
 
 ### 5. Seat Allocation and Overbooking Prevention
+
+![Seat Allocation and Overbooking Prevention](assets/feature-new-pool-when-capacity-exceeds.gif)
 
 Vehicle capacity operates under strict concurrency controls to guarantee seats are never oversold:
 
@@ -105,7 +139,7 @@ REQUESTED / OPEN ──► MATCHED ──► DRIVER_ARRIVED ──► STARTED �
 Individual fares decrease as more passengers join, with riders traveling farther paying a proportional share:
 
 * **Total Trip Cost:** Trip cost is determined by the vehicle's longest passenger leg:
-  `Trip Total = Base Fare (50 BDT) + (Distance Rate (20 BDT/km) × Farthest Destination Distance)`
+  `Trip Total = Base Fare (30 BDT) + (Distance Rate (20 BDT/km) × Farthest Destination Distance)`
 * **Proportional Distance Splitting:** The shared trip cost is divided among passengers based on their personal travel distances:
   `Passenger Share = Trip Total × (Passenger Distance / Sum of All Passenger Distances)`
   Passengers who travel farther pay more, while passengers disembarking earlier pay less.
@@ -165,6 +199,119 @@ The application enforces data boundaries between passengers and drivers:
 * **Passenger Fare Privacy:** A passenger can view only their own fare, route details, and payment state. The platform never exposes what other riders in the vehicle paid.
 * **Restricted Manifest Access:** Passenger names and seat allocations are visible only to the driver assigned to that specific pool.
 * **Server-Side Authorization:** Every database read and write verifies the caller's identity and user role against session credentials. Request parameters cannot be manipulated to access or alter another user's ride.
+
+---
+
+## Project Structure
+
+```
+OiTesla/
+├── client/                          # Next.js App Router frontend
+│   ├── app/
+│   │   ├── (auth)/                  # Login / register pages
+│   │   ├── (driver)/                # Driver console pages
+│   │   └── (passenger)/             # Passenger ride pages
+│   ├── features/                    # Feature slices (auth, rides, driver, locations)
+│   │   └── <feature>/               # api/ hooks/ store/ components/ per slice
+│   ├── components/                  # Shared UI (shadcn + custom)
+│   ├── api/                         # Axios instance + React Query client
+│   ├── hooks/                       # Shared hooks
+│   ├── store/                       # Global Zustand stores
+│   └── lib/                         # Utility functions
+│
+├── server/
+│   ├── src/
+│   │   ├── config/                  # Zod-parsed env vars + app constants
+│   │   ├── db/
+│   │   │   ├── schema/              # Drizzle table definitions (one per entity)
+│   │   │   ├── migrations/          # Auto-generated via drizzle-kit
+│   │   │   ├── client.ts            # Drizzle client singleton
+│   │   │   └── seed.ts              # Demo data (Jashim, Nusrat, Rafiq, Shirin, Tanjim)
+│   │   ├── modules/                 # Feature-sliced vertical domains
+│   │   │   ├── auth/                # Register + login + JWT
+│   │   │   ├── users/               # Profile (GET /users/me)
+│   │   │   ├── locations/           # Public location directory
+│   │   │   ├── rides/               # Ride requests + passenger lifecycle
+│   │   │   ├── pools/               # Matching, seat guard, state machine, fares
+│   │   │   ├── driver/              # Status toggle, pool accept/decline/lifecycle
+│   │   │   ├── events/              # Append-only audit log (ride_events)
+│   │   │   └── health/              # Health check endpoint
+│   │   ├── shared/                  # Cross-cutting (middleware, errors, utils, wrappers)
+│   │   ├── app.ts                   # Express assembly
+│   │   └── server.ts                # HTTP entrypoint
+│   ├── tests/                       # Unit tests organised by domain
+│   ├── docker-compose.yml           # db + migrate/seed + api
+│   ├── Dockerfile                   # Multi-stage (builder → runner)
+│   └── drizzle.config.ts
+│
+└── docs/                            # Architecture, PRD, API, data model, ADRs, design
+```
+
+> See [`docs/Codebase.md`](docs/Codebase.md) for layer rules, naming conventions, and module wiring patterns.
+
+---
+
+## Prerequisites
+
+| Requirement | Minimum Version | Notes |
+|---|---|---|
+| **Node.js** | 20+ | Runtime for both server and client |
+| **npm** | 10+ | Ships with Node 20 |
+| **Docker** + **Docker Compose** | 24+ / v2 | Containerized PostgreSQL and server |
+| **PostgreSQL** | 16+ | Only if running the database outside Docker |
+
+---
+
+## Getting Started
+
+**1. Clone and install dependencies**
+
+```bash
+git clone https://github.com/rafidoth/oi-tesla.git
+cd oi-tesla
+
+cd server && npm install
+cd ../client && npm install
+```
+
+**2. Configure environment variables**
+
+```bash
+cp server/.env.example server/.env
+```
+
+Fill in the values:
+
+```env
+POSTGRES_USER=oitesla
+POSTGRES_PASSWORD=<your-password>
+POSTGRES_DB=oitesla
+NODE_ENV=development
+PORT=8080
+JWT_SECRET=<generate-a-secret>
+DATABASE_URL=postgres://oitesla:<your-password>@localhost:5432/oitesla
+```
+
+**3. Start with Docker (recommended)**
+
+```bash
+cd server
+make up          # db → migrate + seed → api on :8080
+```
+
+**4. Start the client**
+
+```bash
+cd client
+npm run dev      # http://localhost:3000
+```
+
+**5. Run tests**
+
+```bash
+cd server
+npm test         # vitest
+```
 
 ---
 
@@ -306,6 +453,52 @@ erDiagram
         timestamptz occurred_at "DEFAULT now()"
     }
 ```
+
+---
+
+## API Overview
+
+All endpoints are prefixed with `/api`. Authenticated routes require `Authorization: Bearer <JWT>`. See [`docs/API.md`](docs/API.md) for request/response schemas, error codes, and detailed conventions.
+
+**Auth**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | — | Register a passenger or driver account (drivers include vehicle details) |
+| `POST` | `/api/auth/login` | — | Authenticate and receive a JWT (valid 24 hours) |
+
+**Passenger**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/locations` | — | List all supported locations and served route pairs |
+| `POST` | `/api/rides` | Passenger | Request a ride with pickup, destination, seats, and payment method; triggers eager pool matching |
+| `GET` | `/api/rides` | Passenger | List own rides (active and history), newest first |
+| `GET` | `/api/rides/:id` | Passenger | Get own ride details: derived status, current fare, and pool summary |
+| `POST` | `/api/rides/:id/cancel` | Passenger | Cancel a ride (permitted only while status is `REQUESTED` or `MATCHED`) |
+| `POST` | `/api/rides/:id/pay` | Passenger | Settle fare via TeslaPay (`PENDING → PAID`) |
+
+**Driver**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/driver/me` | Driver | Get own vehicle, online status, and active pool |
+| `PATCH` | `/api/driver/status` | Driver | Toggle availability (`ONLINE` / `OFFLINE`) |
+| `GET` | `/api/driver/pools?status=OPEN` | Driver | List open pools compatible with the driver's vehicle capacity |
+| `POST` | `/api/driver/pools/:id/accept` | Driver | Accept an open pool (`OPEN → MATCHED`) |
+| `POST` | `/api/driver/pools/:id/decline` | Driver | Decline a pool (hidden from this driver, visible to others) |
+| `POST` | `/api/driver/pools/:id/arrive` | Driver | Mark arrival at pickup (`MATCHED → DRIVER_ARRIVED`) |
+| `POST` | `/api/driver/pools/:id/start` | Driver | Start the trip and freeze all fares (`DRIVER_ARRIVED → STARTED`) |
+| `POST` | `/api/driver/pools/:id/complete` | Driver | Complete the trip and generate payment records (`STARTED → COMPLETED`) |
+| `GET` | `/api/driver/pools/:id` | Driver | Get pool details with full passenger roster, fares, and statuses |
+| `GET` | `/api/driver/pools?status=ALL` | Driver | List own pool history with destinations, seats, and total earnings |
+| `POST` | `/api/driver/rides/:id/cash-received` | Driver | Confirm cash payment from a passenger (`PENDING → PAID`) |
+
+**Ops**
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET` | `/api/health` | — | Health check returning service and database status |
 
 ---
 
