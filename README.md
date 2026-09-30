@@ -2,6 +2,8 @@
 
 Shared ride-pooling platform for electric auto-rickshaws in Dhaka.
 
+[Video Link](https://drive.google.com/drive/folders/1Cx5rL3A4G0xo8seoMIqwuvdmPSxEB0GR?usp=sharing)
+
 ## What I Built
 
 The core challenge was getting the domain model right — pooling, fares, capacity, and payments all interact, and any one of them done wrong breaks the rest.
