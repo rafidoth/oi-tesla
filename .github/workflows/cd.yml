@@ -1,48 +1,54 @@
 name: CD
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
-    branches:
-      - main
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or branch to deploy
+        required: true
+        default: release/v1.0.0
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
     name: Continuous Deployment
+    needs: ci
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    env:
+      DEPLOY_REF: ${{ github.event.release.tag_name || inputs.ref }}
 
     steps:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME || secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
+          envs: DEPLOY_REF
           script_stop: true
           script: |
-            # Set project directory (default: ~/OiTesla, can be customized via secrets.TARGET_DIR)
             TARGET_DIR="${{ secrets.TARGET_DIR || '~/OiTesla' }}"
             TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
 
-            echo "=== Navigating to project directory: $TARGET_DIR ==="
             cd "$TARGET_DIR" || { echo "Directory $TARGET_DIR not found"; exit 1; }
 
-            echo "=== Pulling latest changes from main branch ==="
-            git fetch origin main
-            git reset --hard origin/main
+            echo "=== Deploying $DEPLOY_REF ==="
+            git fetch --all --tags --prune
+            git checkout --force "$DEPLOY_REF"
+            # if DEPLOY_REF is a branch, sync it to the remote
+            git reset --hard "origin/$DEPLOY_REF" 2>/dev/null || true
 
-            echo "=== Navigating to server directory ==="
-            cd server || { echo "server directory not found"; exit 1; }
-
-            echo "=== Rebuilding and restarting containers ==="
+            cd server
             docker compose up -d --build
-
-            echo "=== Cleaning up dangling images ==="
             docker image prune -f
 
-            echo "=== Deployment successful! ==="
+            echo "=== Deployment successful ==="

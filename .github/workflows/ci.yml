@@ -2,11 +2,10 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, pre-release, 'release/**']
   pull_request:
-    branches:
-      - main
+    branches: [main, pre-release]
+  workflow_call:
 
 jobs:
   ci:
@@ -17,20 +16,34 @@ jobs:
       run:
         working-directory: server
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    # Remove this block if your tests don't use Postgres
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: oitesla_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
-      - name: Setup Node.js 20
-        uses: actions/setup-node@v4
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/oitesla_test
+      JWT_SECRET: ci-only-secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run typecheck
-        run: npm run typecheck
-
-      - name: Run tests
-        run: npm run test
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
