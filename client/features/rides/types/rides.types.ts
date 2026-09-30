@@ -111,7 +111,17 @@ export type DerivedRideStatus =
   | "CANCELLED";
 
 /**
- * Sanitized active ride details matching backend response with co-passenger privacy protected.
+ * Sanitized co-passenger summary visible to fellow pool passengers (D16).
+ * Exposes only first name, destination location, and seats — no fares, IDs, or payment info.
+ */
+export interface CoPassengerSummary {
+  name: string;
+  destLocationName: string;
+  seats: number;
+}
+
+/**
+ * Sanitized active ride details matching backend response with co-passenger visibility (D16).
  */
 export interface ActiveRideDetailsDto {
   id: string;
@@ -140,6 +150,7 @@ export interface ActiveRideDetailsDto {
     status: string;
     capacity: number;
     occupiedSeats: number;
+    coPassengers: CoPassengerSummary[];
     driver?: {
       name: string;
     } | null;

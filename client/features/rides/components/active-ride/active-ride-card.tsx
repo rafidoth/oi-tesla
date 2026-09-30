@@ -46,6 +46,7 @@ export function ActiveRideCard({
             userSeats={ride.seats}
             driver={ride.pool.driver}
             vehicle={ride.pool.vehicle}
+            coPassengers={ride.pool.coPassengers}
           />
 
           <RideFare
