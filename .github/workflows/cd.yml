@@ -1,0 +1,48 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Continuous Deployment
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME || secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script_stop: true
+          script: |
+            # Set project directory (default: ~/OiTesla, can be customized via secrets.TARGET_DIR)
+            TARGET_DIR="${{ secrets.TARGET_DIR || '~/OiTesla' }}"
+            TARGET_DIR="${TARGET_DIR/#\~/$HOME}"
+
+            echo "=== Navigating to project directory: $TARGET_DIR ==="
+            cd "$TARGET_DIR" || { echo "Directory $TARGET_DIR not found"; exit 1; }
+
+            echo "=== Pulling latest changes from main branch ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Navigating to server directory ==="
+            cd server || { echo "server directory not found"; exit 1; }
+
+            echo "=== Rebuilding and restarting containers ==="
+            docker compose up -d --build
+
+            echo "=== Cleaning up dangling images ==="
+            docker image prune -f
+
+            echo "=== Deployment successful! ==="
