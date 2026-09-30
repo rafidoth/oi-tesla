@@ -673,6 +673,46 @@ export class RidesRepository {
           : null,
     };
   }
+
+  /**
+   * Fetches co-passengers in the same pool, excluding the requesting passenger
+   * and cancelled rides. Returns only first name, destination location name,
+   * and seats — no fares, IDs, or payment info (D16).
+   */
+  async findCoPassengersByPoolId(
+    poolId: string,
+    excludePassengerId: string,
+    tx?: any
+  ): Promise<CoPassengerRow[]> {
+    const executor: DbType = tx ? (tx as DbType) : this.db;
+    const passengerUsers = alias(users, 'passenger_user');
+    const rows = await executor
+      .select({
+        name: passengerUsers.name,
+        destLocationName: destLocations.name,
+        seats: passengerRides.seats,
+      })
+      .from(passengerRides)
+      .innerJoin(rideRequests, eq(passengerRides.rideRequestId, rideRequests.id))
+      .innerJoin(destLocations, eq(rideRequests.destLocationId, destLocations.id))
+      .innerJoin(passengerUsers, eq(passengerRides.passengerId, passengerUsers.id))
+      .where(
+        and(
+          eq(passengerRides.poolId, poolId),
+          isNull(passengerRides.cancelledAt),
+          sql`${passengerRides.passengerId} != ${excludePassengerId}`
+        )
+      )
+      .orderBy(passengerRides.createdAt);
+
+    return rows;
+  }
+}
+
+export interface CoPassengerRow {
+  name: string;
+  destLocationName: string;
+  seats: number;
 }
 
 export default RidesRepository;

@@ -34,6 +34,16 @@ export interface LocationSummaryDto {
   lng: number;
 }
 
+/**
+ * Sanitized co-passenger summary visible to fellow pool passengers (D16).
+ * Exposes only first name, destination location, and seats — no fares, IDs, or payment info.
+ */
+export interface CoPassengerSummary {
+  name: string;
+  destLocationName: string;
+  seats: number;
+}
+
 export interface ActiveRideDetailsDto {
   id: string;
   rideRequestId: string;
@@ -61,6 +71,7 @@ export interface ActiveRideDetailsDto {
     status: string;
     capacity: number;
     occupiedSeats: number;
+    coPassengers: CoPassengerSummary[];
     driver?: {
       name: string;
     } | null;
