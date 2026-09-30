@@ -144,6 +144,14 @@ describe('End-to-End Pooling Scenarios Integration Test Suite', () => {
       expect(rafiqActiveRide!.farePaisa).toBe(4286);
       expect(nusratActiveRide!.farePaisa! + rafiqActiveRide!.farePaisa!).toBe(15000);
 
+      // Assert: Co-passengers visible to each other (D16)
+      expect(nusratActiveRide!.pool.coPassengers).toEqual([
+        { name: CAST.passengers.rafiq.name, destLocationName: 'Gulshan', seats: 1 },
+      ]);
+      expect(rafiqActiveRide!.pool.coPassengers).toEqual([
+        { name: CAST.passengers.nusrat.name, destLocationName: 'Mohakhali', seats: 1 },
+      ]);
+
       // Assert: Audit events logged (REQUEST_CREATED, RIDE_MATCHED, FARE_RECALCULATED)
       const rafiqReqEvents = env.store.getEvents({
         event: 'REQUEST_CREATED',
