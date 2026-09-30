@@ -7,7 +7,6 @@ import { UserMenu } from "@/features/auth";
 export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full h-14 bg-surface border-b border-border px-4 sm:px-8 flex items-center justify-between">
-      {/* Brand logo & title */}
       <Link
         href="/"
         className="flex items-center gap-2.5 text-ink font-bold text-lg tracking-tight hover:opacity-90 transition-opacity"

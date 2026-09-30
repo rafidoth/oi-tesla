@@ -9,16 +9,15 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { FareEstimatorCard } from "@/features/rides";
 import { Button } from "@/components/ui/button";
 import { ShieldCheck, Clock, Coins, Zap, ArrowRight } from "lucide-react";
-import { cn } from "cn";
 
 function LandingNavbar() {
   const { openModal } = useAuthModalStore();
 
   return (
-    <header className="h-14 border-b border-border/70 px-4 sm:px-8 bg-white/90 dark:bg-zinc-950/90 backdrop-blur sticky top-0 z-30 flex items-center">
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+    <header className="h-14 px-4 sm:px-8 bg-gradient-to-b from-white to-transparent sticky top-0 z-20 flex items-center">
+      <div className="w-full max-w-7xl mx-auto flex items-center justify-between bg-transparent">
         <Link href="/" className="flex items-center gap-2">
-          <div className="size-7 rounded bg-black dark:bg-white text-white dark:text-black font-black flex items-center justify-center">
+          <div className="size-7 rounded bg-black text-white font-black flex items-center justify-center">
             <Zap className="size-4 fill-current" />
           </div>
           <span className="font-extrabold text-base tracking-tight text-ink">
@@ -130,10 +129,9 @@ export default function Home() {
   }, [hasHydrated, isAuthenticated, user, router]);
 
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background text-foreground relative">
-      <LandingNavbar />
-
+    <div className="min-h-[100dvh] flex flex-col relative">
       <main className="flex-1 relative flex flex-col justify-between overflow-hidden">
+        <LandingNavbar />
         <div className="absolute inset-0 z-0">
           <Image
             src="/images/hero-rickshaw.jpg"
